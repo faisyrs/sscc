@@ -299,5 +299,165 @@
     ],
     "precedence": { "priority": 10, "strategy": "stack" },
     "provenance": { "source": "Core Rules", "note": "Remove can_move from activated unit after movement completes" }
+  },
+  {
+    "id": "CORE.Shoot.Prohibit.Advanced.1",
+    "scope": "global",
+    "trigger": { "event": "ShootingPhaseStarted" },
+    "when": {
+      "all": [
+        { "selector": { "id": "units_advanced" } }
+      ]
+    },
+    "effect": [
+      {
+        "addProhibition": {
+          "target": { "selector": "units_advanced" },
+          "action": "shoot",
+          "reason": "advanced_move"
+        }
+      }
+    ],
+    "precedence": { "priority": 5, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "page": 15, "note": "Units that advanced cannot shoot" }
+  },
+  {
+    "id": "CORE.Shoot.Prohibit.FellBack.1",
+    "scope": "global",
+    "trigger": { "event": "ShootingPhaseStarted" },
+    "when": {
+      "all": [
+        { "selector": { "id": "units_fell_back" } }
+      ]
+    },
+    "effect": [
+      {
+        "addProhibition": {
+          "target": { "selector": "units_fell_back" },
+          "action": "shoot",
+          "reason": "fell_back"
+        }
+      }
+    ],
+    "precedence": { "priority": 5, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "page": 15, "note": "Units that fell back cannot shoot" }
+  },
+  {
+    "id": "CORE.Shoot.Grant.1",
+    "scope": "global",
+    "trigger": { "event": "ShootingPhaseStarted" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "applyStatus": {
+          "target": { "selector": "active_player_units" },
+          "key": "can_shoot"
+        }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Grant can_shoot to active player units. Prohibition rules at priority 5 fire first, so prohibited units are excluded by the engine." }
+  },
+  {
+    "id": "CORE.Shoot.OfferSelect.1",
+    "scope": "global",
+    "trigger": { "event": "ShootingPhaseStarted" },
+    "when": {
+      "all": [
+        { "selector": { "id": "units_can_shoot" } }
+      ]
+    },
+    "effect": [
+      {
+        "addChoice": {
+          "id": "select_unit_to_shoot",
+          "label": "Select a unit to shoot with",
+          "actionRef": "CORE.Shoot.SelectAction.1",
+          "selectionFrom": { "selector": "units_can_shoot" }
+        }
+      }
+    ],
+    "precedence": { "priority": 20, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Offer unit selection for shooting" }
+  },
+  {
+    "id": "CORE.Shoot.ReofferSelect.1",
+    "scope": "global",
+    "trigger": { "event": "UnitShootingEnded" },
+    "when": {
+      "all": [
+        { "selector": { "id": "units_can_shoot" } }
+      ]
+    },
+    "effect": [
+      {
+        "addChoice": {
+          "id": "select_unit_to_shoot",
+          "label": "Select a unit to shoot with",
+          "actionRef": "CORE.Shoot.SelectAction.1",
+          "selectionFrom": { "selector": "units_can_shoot" }
+        }
+      }
+    ],
+    "precedence": { "priority": 20, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Re-offer unit selection after each shooting activation" }
+  },
+  {
+    "id": "CORE.Shoot.SelectAction.1",
+    "scope": "global",
+    "trigger": { "event": "ChoiceSelected" },
+    "when": {
+      "all": [
+        { "eventParamEquals": { "param": "choiceId", "value": "select_unit_to_shoot" } }
+      ]
+    },
+    "effect": [
+      {
+        "setValue": {
+          "path": "$.activation.unitId",
+          "valueFromEventParam": "selectedUnitId"
+        }
+      },
+      {
+        "setValue": { "path": "$.activation.type", "value": "shoot" }
+      },
+      {
+        "emit": { "eventId": "UnitShootingStarted", "params": { "player": { "eventParam": "player" } } }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Set activation context and begin shooting activation" }
+  },
+  {
+    "id": "CORE.Shoot.PassThrough.1",
+    "scope": "global",
+    "trigger": { "event": "UnitShootingStarted" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "appendLogNote": { "message": "Shooting activation -- attack pipeline not implemented in skeleton" }
+      },
+      {
+        "emit": { "eventId": "UnitShootingEnded", "params": { "player": { "eventParam": "player" } } }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Skeleton pass-through. Future packs add target selection and attack resolution here." }
+  },
+  {
+    "id": "CORE.Shoot.Consume.1",
+    "scope": "global",
+    "trigger": { "event": "UnitShootingEnded" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "removeStatus": {
+          "target": { "path": "$.activation.unitId" },
+          "key": "can_shoot"
+        }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Remove can_shoot from activated unit" }
   }
 ]
