@@ -61,5 +61,243 @@
     ],
     "precedence": { "priority": 5, "strategy": "stack" },
     "provenance": { "source": "Core Rules", "note": "Clear battleshocked from previous round at start of new Command phase" }
+  },
+  {
+    "id": "CORE.Move.Grant.1",
+    "scope": "global",
+    "trigger": { "event": "MovementPhaseStarted" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "applyStatus": {
+          "target": { "selector": "active_player_units" },
+          "key": "can_move"
+        }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Grant can_move to all active player units at start of Movement phase" }
+  },
+  {
+    "id": "CORE.Move.OfferSelect.1",
+    "scope": "global",
+    "trigger": { "event": "MovementPhaseStarted" },
+    "when": {
+      "all": [
+        { "selector": { "id": "units_can_move" } }
+      ]
+    },
+    "effect": [
+      {
+        "addChoice": {
+          "id": "select_unit_to_move",
+          "label": "Select a unit to move",
+          "actionRef": "CORE.Move.SelectAction.1",
+          "selectionFrom": { "selector": "units_can_move" }
+        }
+      }
+    ],
+    "precedence": { "priority": 20, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Offer unit selection choice at start of movement phase" }
+  },
+  {
+    "id": "CORE.Move.ReofferSelect.1",
+    "scope": "global",
+    "trigger": { "event": "UnitMovementEnded" },
+    "when": {
+      "all": [
+        { "selector": { "id": "units_can_move" } }
+      ]
+    },
+    "effect": [
+      {
+        "addChoice": {
+          "id": "select_unit_to_move",
+          "label": "Select a unit to move",
+          "actionRef": "CORE.Move.SelectAction.1",
+          "selectionFrom": { "selector": "units_can_move" }
+        }
+      }
+    ],
+    "precedence": { "priority": 20, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Re-offer unit selection after each activation if eligible units remain" }
+  },
+  {
+    "id": "CORE.Move.SelectAction.1",
+    "scope": "global",
+    "trigger": { "event": "ChoiceSelected" },
+    "when": {
+      "all": [
+        { "eventParamEquals": { "param": "choiceId", "value": "select_unit_to_move" } }
+      ]
+    },
+    "effect": [
+      {
+        "setValue": {
+          "path": "$.activation.unitId",
+          "valueFromEventParam": "selectedUnitId"
+        }
+      },
+      {
+        "emit": { "eventId": "UnitMovementStarted", "params": { "player": { "eventParam": "player" } } }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Set activation context and emit UnitMovementStarted when a unit is selected" }
+  },
+  {
+    "id": "CORE.Move.OfferTypes.1",
+    "scope": "global",
+    "trigger": { "event": "UnitMovementStarted" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "addChoice": {
+          "id": "move_normal",
+          "label": "Normal Move",
+          "actionRef": "CORE.Move.TypeAction.Normal.1"
+        }
+      },
+      {
+        "addChoice": {
+          "id": "move_advance",
+          "label": "Advance",
+          "actionRef": "CORE.Move.TypeAction.Advance.1"
+        }
+      },
+      {
+        "addChoice": {
+          "id": "move_fall_back",
+          "label": "Fall Back",
+          "actionRef": "CORE.Move.TypeAction.FallBack.1"
+        }
+      },
+      {
+        "addChoice": {
+          "id": "move_stationary",
+          "label": "Remain Stationary",
+          "actionRef": "CORE.Move.TypeAction.Stationary.1"
+        }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Offer movement type choices. Fall Back conditions would be gated in a full implementation." }
+  },
+  {
+    "id": "CORE.Move.TypeAction.Normal.1",
+    "scope": "global",
+    "trigger": { "event": "ChoiceSelected" },
+    "when": {
+      "all": [
+        { "eventParamEquals": { "param": "choiceId", "value": "move_normal" } }
+      ]
+    },
+    "effect": [
+      {
+        "setValue": { "path": "$.activation.type", "value": "normal_move" }
+      },
+      {
+        "emit": { "eventId": "UnitMovementEnded", "params": { "player": { "eventParam": "player" } } }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Normal move -- no status applied" }
+  },
+  {
+    "id": "CORE.Move.TypeAction.Advance.1",
+    "scope": "global",
+    "trigger": { "event": "ChoiceSelected" },
+    "when": {
+      "all": [
+        { "eventParamEquals": { "param": "choiceId", "value": "move_advance" } }
+      ]
+    },
+    "effect": [
+      {
+        "setValue": { "path": "$.activation.type", "value": "advance" }
+      },
+      {
+        "applyStatus": {
+          "target": { "path": "$.activation.unitId" },
+          "key": "advanced_move",
+          "expiresOn": "TurnEnded"
+        }
+      },
+      {
+        "emit": { "eventId": "UnitMovementEnded", "params": { "player": { "eventParam": "player" } } }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "page": 15, "note": "Advance -- apply advanced_move status, expires at TurnEnded" }
+  },
+  {
+    "id": "CORE.Move.TypeAction.FallBack.1",
+    "scope": "global",
+    "trigger": { "event": "ChoiceSelected" },
+    "when": {
+      "all": [
+        { "eventParamEquals": { "param": "choiceId", "value": "move_fall_back" } }
+      ]
+    },
+    "effect": [
+      {
+        "setValue": { "path": "$.activation.type", "value": "fall_back" }
+      },
+      {
+        "applyStatus": {
+          "target": { "path": "$.activation.unitId" },
+          "key": "fell_back",
+          "expiresOn": "TurnEnded"
+        }
+      },
+      {
+        "emit": { "eventId": "UnitMovementEnded", "params": { "player": { "eventParam": "player" } } }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "page": 15, "note": "Fall Back -- apply fell_back status, expires at TurnEnded" }
+  },
+  {
+    "id": "CORE.Move.TypeAction.Stationary.1",
+    "scope": "global",
+    "trigger": { "event": "ChoiceSelected" },
+    "when": {
+      "all": [
+        { "eventParamEquals": { "param": "choiceId", "value": "move_stationary" } }
+      ]
+    },
+    "effect": [
+      {
+        "setValue": { "path": "$.activation.type", "value": "remain_stationary" }
+      },
+      {
+        "applyStatus": {
+          "target": { "path": "$.activation.unitId" },
+          "key": "remained_stationary",
+          "expiresOn": "TurnEnded"
+        }
+      },
+      {
+        "emit": { "eventId": "UnitMovementEnded", "params": { "player": { "eventParam": "player" } } }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "page": 15, "note": "Remain Stationary -- apply remained_stationary status, expires at TurnEnded" }
+  },
+  {
+    "id": "CORE.Move.Consume.1",
+    "scope": "global",
+    "trigger": { "event": "UnitMovementEnded" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "removeStatus": {
+          "target": { "path": "$.activation.unitId" },
+          "key": "can_move"
+        }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Remove can_move from activated unit after movement completes" }
   }
 ]
