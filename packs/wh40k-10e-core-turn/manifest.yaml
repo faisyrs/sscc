@@ -1,0 +1,5 @@
+id: wh40k-10e-core-turn
+name: "Warhammer 40,000 10th Edition - Core Turn Sequence"
+version: 0.1.0
+engine_version: "^0.2.0"
+dependencies: []
