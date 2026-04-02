@@ -787,5 +787,129 @@
     ],
     "precedence": { "priority": 10, "strategy": "stack" },
     "provenance": { "source": "Core Rules", "note": "Remove can_fight from activated unit" }
+  },
+  {
+    "id": "CORE.Turn.SetPlayer.1",
+    "scope": "global",
+    "trigger": { "event": "TurnStarted" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "setValue": {
+          "path": "$.turnPlayer",
+          "valueFromEventParam": "player"
+        }
+      }
+    ],
+    "precedence": { "priority": 1, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Set turnPlayer in state so selectors can identify active player units" }
+  },
+  {
+    "id": "CORE.Turn.ClearActivation.1",
+    "scope": "global",
+    "trigger": { "event": "TurnStarted" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "setValue": { "path": "$.activation.unitId", "value": null }
+      },
+      {
+        "setValue": { "path": "$.activation.type", "value": null }
+      }
+    ],
+    "precedence": { "priority": 2, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Clear activation context at start of each turn" }
+  },
+  {
+    "id": "CORE.Cleanup.Safety.Move.1",
+    "scope": "global",
+    "trigger": { "event": "TurnEnded" },
+    "when": {
+      "all": [
+        { "selector": { "id": "units_can_move" } }
+      ]
+    },
+    "effect": [
+      {
+        "appendLogNote": { "message": "WARNING: units still had can_move at TurnEnded -- expected empty" }
+      },
+      {
+        "removeStatus": {
+          "target": { "selector": "units_can_move" },
+          "key": "can_move"
+        }
+      }
+    ],
+    "precedence": { "priority": 100, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Safety cleanup for can_move" }
+  },
+  {
+    "id": "CORE.Cleanup.Safety.Shoot.1",
+    "scope": "global",
+    "trigger": { "event": "TurnEnded" },
+    "when": {
+      "all": [
+        { "selector": { "id": "units_can_shoot" } }
+      ]
+    },
+    "effect": [
+      {
+        "appendLogNote": { "message": "WARNING: units still had can_shoot at TurnEnded -- expected empty" }
+      },
+      {
+        "removeStatus": {
+          "target": { "selector": "units_can_shoot" },
+          "key": "can_shoot"
+        }
+      }
+    ],
+    "precedence": { "priority": 100, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Safety cleanup for can_shoot" }
+  },
+  {
+    "id": "CORE.Cleanup.Safety.Charge.1",
+    "scope": "global",
+    "trigger": { "event": "TurnEnded" },
+    "when": {
+      "all": [
+        { "selector": { "id": "units_can_charge" } }
+      ]
+    },
+    "effect": [
+      {
+        "appendLogNote": { "message": "WARNING: units still had can_charge at TurnEnded -- expected empty" }
+      },
+      {
+        "removeStatus": {
+          "target": { "selector": "units_can_charge" },
+          "key": "can_charge"
+        }
+      }
+    ],
+    "precedence": { "priority": 100, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Safety cleanup for can_charge" }
+  },
+  {
+    "id": "CORE.Cleanup.Safety.Fight.1",
+    "scope": "global",
+    "trigger": { "event": "TurnEnded" },
+    "when": {
+      "all": [
+        { "selector": { "id": "units_can_fight" } }
+      ]
+    },
+    "effect": [
+      {
+        "appendLogNote": { "message": "WARNING: units still had can_fight at TurnEnded -- expected empty" }
+      },
+      {
+        "removeStatus": {
+          "target": { "selector": "units_can_fight" },
+          "key": "can_fight"
+        }
+      }
+    ],
+    "precedence": { "priority": 100, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Safety cleanup for can_fight" }
   }
 ]
