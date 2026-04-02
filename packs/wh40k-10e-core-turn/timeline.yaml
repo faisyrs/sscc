@@ -1,0 +1,93 @@
+timeline:
+  - event: StartOfGame
+
+  - repeat:
+      count: { path: "$.totalRounds" }
+      indexParam: round
+      body:
+        - event: RoundStarted
+          params: [round]
+
+        - forEach:
+            over: { kind: "player", from: "$.players" }
+            bindParam: player
+            body:
+              - event: TurnStarted
+                params: [player]
+
+              - subSequence: commandPhase
+                params: [player]
+
+              - subSequence: movementPhase
+                params: [player]
+
+              - subSequence: shootingPhase
+                params: [player]
+
+              - subSequence: chargePhase
+                params: [player]
+
+              - subSequence: fightPhase
+                params: [player]
+
+              - subSequence: endPhase
+                params: [player]
+
+              - event: TurnEnded
+                params: [player]
+
+        - event: RoundEnded
+          params: [round]
+
+  - event: EndOfGame
+
+windows: []
+
+subSequences:
+  commandPhase:
+    params: [player]
+    body:
+      - event: CommandPhaseStarted
+        params: [player]
+      - event: CommandPhaseEnded
+        params: [player]
+
+  movementPhase:
+    params: [player]
+    body:
+      - event: MovementPhaseStarted
+        params: [player]
+      - event: MovementPhaseEnded
+        params: [player]
+
+  shootingPhase:
+    params: [player]
+    body:
+      - event: ShootingPhaseStarted
+        params: [player]
+      - event: ShootingPhaseEnded
+        params: [player]
+
+  chargePhase:
+    params: [player]
+    body:
+      - event: ChargePhaseStarted
+        params: [player]
+      - event: ChargePhaseEnded
+        params: [player]
+
+  fightPhase:
+    params: [player]
+    body:
+      - event: FightPhaseStarted
+        params: [player]
+      - event: FightPhaseEnded
+        params: [player]
+
+  endPhase:
+    params: [player]
+    body:
+      - event: EndPhaseStarted
+        params: [player]
+      - event: EndPhaseEnded
+        params: [player]
