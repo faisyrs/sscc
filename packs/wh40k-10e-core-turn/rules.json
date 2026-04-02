@@ -459,5 +459,218 @@
     ],
     "precedence": { "priority": 10, "strategy": "stack" },
     "provenance": { "source": "Core Rules", "note": "Remove can_shoot from activated unit" }
+  },
+  {
+    "id": "CORE.Charge.Prohibit.Advanced.1",
+    "scope": "global",
+    "trigger": { "event": "ChargePhaseStarted" },
+    "when": {
+      "all": [
+        { "selector": { "id": "units_advanced" } }
+      ]
+    },
+    "effect": [
+      {
+        "addProhibition": {
+          "target": { "selector": "units_advanced" },
+          "action": "charge",
+          "reason": "advanced_move"
+        }
+      }
+    ],
+    "precedence": { "priority": 5, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "page": 15, "note": "Units that advanced cannot charge" }
+  },
+  {
+    "id": "CORE.Charge.Prohibit.FellBack.1",
+    "scope": "global",
+    "trigger": { "event": "ChargePhaseStarted" },
+    "when": {
+      "all": [
+        { "selector": { "id": "units_fell_back" } }
+      ]
+    },
+    "effect": [
+      {
+        "addProhibition": {
+          "target": { "selector": "units_fell_back" },
+          "action": "charge",
+          "reason": "fell_back"
+        }
+      }
+    ],
+    "precedence": { "priority": 5, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "page": 15, "note": "Units that fell back cannot charge" }
+  },
+  {
+    "id": "CORE.Charge.Grant.1",
+    "scope": "global",
+    "trigger": { "event": "ChargePhaseStarted" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "applyStatus": {
+          "target": { "selector": "active_player_units" },
+          "key": "can_charge"
+        }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Grant can_charge to active player units" }
+  },
+  {
+    "id": "CORE.Charge.OfferSelect.1",
+    "scope": "global",
+    "trigger": { "event": "ChargePhaseStarted" },
+    "when": {
+      "all": [
+        { "selector": { "id": "units_can_charge" } }
+      ]
+    },
+    "effect": [
+      {
+        "addChoice": {
+          "id": "select_unit_to_charge",
+          "label": "Select a unit to charge with",
+          "actionRef": "CORE.Charge.SelectAction.1",
+          "selectionFrom": { "selector": "units_can_charge" }
+        }
+      }
+    ],
+    "precedence": { "priority": 20, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Offer unit selection for charging" }
+  },
+  {
+    "id": "CORE.Charge.ReofferSelect.1",
+    "scope": "global",
+    "trigger": { "event": "UnitChargeEnded" },
+    "when": {
+      "all": [
+        { "selector": { "id": "units_can_charge" } }
+      ]
+    },
+    "effect": [
+      {
+        "addChoice": {
+          "id": "select_unit_to_charge",
+          "label": "Select a unit to charge with",
+          "actionRef": "CORE.Charge.SelectAction.1",
+          "selectionFrom": { "selector": "units_can_charge" }
+        }
+      }
+    ],
+    "precedence": { "priority": 20, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Re-offer charge unit selection after each activation" }
+  },
+  {
+    "id": "CORE.Charge.SelectAction.1",
+    "scope": "global",
+    "trigger": { "event": "ChoiceSelected" },
+    "when": {
+      "all": [
+        { "eventParamEquals": { "param": "choiceId", "value": "select_unit_to_charge" } }
+      ]
+    },
+    "effect": [
+      {
+        "setValue": {
+          "path": "$.activation.unitId",
+          "valueFromEventParam": "selectedUnitId"
+        }
+      },
+      {
+        "setValue": { "path": "$.activation.type", "value": "charge" }
+      },
+      {
+        "emit": { "eventId": "UnitChargeStarted", "params": { "player": { "eventParam": "player" } } }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Set activation context and begin charge activation" }
+  },
+  {
+    "id": "CORE.Charge.EmitTargetDeclared.1",
+    "scope": "global",
+    "trigger": { "event": "UnitChargeStarted" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "emit": { "eventId": "ChargeTargetDeclared", "params": { "player": { "eventParam": "player" } } }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Skeleton: emit ChargeTargetDeclared. Future packs add target selection choice here." }
+  },
+  {
+    "id": "CORE.Charge.Distance.1",
+    "scope": "global",
+    "trigger": { "event": "ChargeTargetDeclared" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "roll": {
+          "count": 2,
+          "sides": 6,
+          "storePath": "$.charge.rollResult"
+        }
+      },
+      {
+        "emit": { "eventId": "ChargeRollMade", "params": { "player": { "eventParam": "player" } } }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "page": 19, "note": "Roll 2D6 for charge distance" }
+  },
+  {
+    "id": "CORE.Charge.Resolve.1",
+    "scope": "global",
+    "trigger": { "event": "ChargeRollMade" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "appendLogNote": { "message": "Charge resolution -- distance check not implemented in skeleton, assuming success" }
+      },
+      {
+        "applyStatus": {
+          "target": { "path": "$.activation.unitId" },
+          "key": "charged",
+          "expiresOn": "TurnEnded"
+        }
+      },
+      {
+        "emit": { "eventId": "ChargeMoveCompleted", "params": { "player": { "eventParam": "player" } } }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Skeleton assumes charge success. Full implementation compares roll to distance." }
+  },
+  {
+    "id": "CORE.Charge.Complete.1",
+    "scope": "global",
+    "trigger": { "event": "ChargeMoveCompleted" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "emit": { "eventId": "UnitChargeEnded", "params": { "player": { "eventParam": "player" } } }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Complete charge activation" }
+  },
+  {
+    "id": "CORE.Charge.Consume.1",
+    "scope": "global",
+    "trigger": { "event": "UnitChargeEnded" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "removeStatus": {
+          "target": { "path": "$.activation.unitId" },
+          "key": "can_charge"
+        }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Remove can_charge from activated unit" }
   }
 ]
