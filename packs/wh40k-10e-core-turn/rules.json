@@ -672,5 +672,120 @@
     ],
     "precedence": { "priority": 10, "strategy": "stack" },
     "provenance": { "source": "Core Rules", "note": "Remove can_charge from activated unit" }
+  },
+  {
+    "id": "CORE.Fight.Grant.1",
+    "scope": "global",
+    "trigger": { "event": "FightPhaseStarted" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "appendLogNote": { "message": "Granting can_fight to eligible units. Skeleton: units with charged status only." }
+      }
+    ],
+    "precedence": { "priority": 5, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Placeholder log. Full implementation grants can_fight to units in engagement range or with charged status." }
+  },
+  {
+    "id": "CORE.Fight.OfferSelect.1",
+    "scope": "global",
+    "trigger": { "event": "FightPhaseStarted" },
+    "when": {
+      "all": [
+        { "selector": { "id": "units_can_fight" } }
+      ]
+    },
+    "effect": [
+      {
+        "addChoice": {
+          "id": "select_unit_to_fight",
+          "label": "Select a unit to fight with",
+          "actionRef": "CORE.Fight.SelectAction.1",
+          "selectionFrom": { "selector": "units_can_fight" }
+        }
+      }
+    ],
+    "precedence": { "priority": 20, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Offer unit selection for fighting" }
+  },
+  {
+    "id": "CORE.Fight.ReofferSelect.1",
+    "scope": "global",
+    "trigger": { "event": "UnitFightEnded" },
+    "when": {
+      "all": [
+        { "selector": { "id": "units_can_fight" } }
+      ]
+    },
+    "effect": [
+      {
+        "addChoice": {
+          "id": "select_unit_to_fight",
+          "label": "Select a unit to fight with",
+          "actionRef": "CORE.Fight.SelectAction.1",
+          "selectionFrom": { "selector": "units_can_fight" }
+        }
+      }
+    ],
+    "precedence": { "priority": 20, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Re-offer fight unit selection after each activation" }
+  },
+  {
+    "id": "CORE.Fight.SelectAction.1",
+    "scope": "global",
+    "trigger": { "event": "ChoiceSelected" },
+    "when": {
+      "all": [
+        { "eventParamEquals": { "param": "choiceId", "value": "select_unit_to_fight" } }
+      ]
+    },
+    "effect": [
+      {
+        "setValue": {
+          "path": "$.activation.unitId",
+          "valueFromEventParam": "selectedUnitId"
+        }
+      },
+      {
+        "setValue": { "path": "$.activation.type", "value": "fight" }
+      },
+      {
+        "emit": { "eventId": "UnitFightStarted", "params": { "player": { "eventParam": "player" } } }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Set activation context and begin fight activation" }
+  },
+  {
+    "id": "CORE.Fight.PassThrough.1",
+    "scope": "global",
+    "trigger": { "event": "UnitFightStarted" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "appendLogNote": { "message": "Fight activation -- melee attack pipeline not implemented in skeleton" }
+      },
+      {
+        "emit": { "eventId": "UnitFightEnded", "params": { "player": { "eventParam": "player" } } }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Skeleton pass-through. Future packs add melee target selection and attack resolution." }
+  },
+  {
+    "id": "CORE.Fight.Consume.1",
+    "scope": "global",
+    "trigger": { "event": "UnitFightEnded" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "removeStatus": {
+          "target": { "path": "$.activation.unitId" },
+          "key": "can_fight"
+        }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Remove can_fight from activated unit" }
   }
 ]
