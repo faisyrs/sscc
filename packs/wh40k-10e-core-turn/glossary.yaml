@@ -1,0 +1,83 @@
+keywords:
+  - INFANTRY
+  - VEHICLE
+  - CHARACTER
+  - MONSTER
+
+statuses:
+  # Phase eligibility -- rule-consumed during activation loops
+  can_move:
+    description: "Unit is eligible to activate in the Movement phase"
+  can_shoot:
+    description: "Unit is eligible to activate in the Shooting phase"
+  can_charge:
+    description: "Unit is eligible to activate in the Charge phase"
+  can_fight:
+    description: "Unit is eligible to activate in the Fight phase"
+
+  # Movement results -- engine-managed expiry
+  advanced_move:
+    description: "Unit advanced this turn"
+  fell_back:
+    description: "Unit fell back this turn"
+  remained_stationary:
+    description: "Unit remained stationary this turn"
+
+  # Charge result -- engine-managed expiry
+  charged:
+    description: "Unit successfully charged this turn"
+
+  # Battleshock -- engine-managed expiry
+  battleshocked:
+    description: "Unit failed its Battleshock test"
+
+reason_keys:
+  shoot:
+    - advanced_move
+    - fell_back
+  charge:
+    - advanced_move
+    - fell_back
+
+selectors:
+  active_player_units:
+    kind: unit
+    where:
+      pathEquals:
+        path: "$.turnPlayer"
+        valueFromEventParam: player
+
+  units_can_move:
+    kind: unit
+    where:
+      hasStatus: can_move
+
+  units_can_shoot:
+    kind: unit
+    where:
+      hasStatus: can_shoot
+
+  units_can_charge:
+    kind: unit
+    where:
+      hasStatus: can_charge
+
+  units_can_fight:
+    kind: unit
+    where:
+      hasStatus: can_fight
+
+  units_advanced:
+    kind: unit
+    where:
+      hasStatus: advanced_move
+
+  units_fell_back:
+    kind: unit
+    where:
+      hasStatus: fell_back
+
+  units_battleshocked:
+    kind: unit
+    where:
+      hasStatus: battleshocked
