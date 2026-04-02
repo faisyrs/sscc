@@ -1,0 +1,121 @@
+{
+  "totalRounds": 5,
+  "round": 1,
+  "turnPlayer": null,
+  "players": ["A", "B"],
+  "resources": {
+    "A": { "cp": 0 },
+    "B": { "cp": 0 }
+  },
+  "activation": {
+    "unitId": null,
+    "type": null
+  },
+  "units": {
+    "u1": {
+      "id": "u1",
+      "owner": "A",
+      "name": "Intercessor Squad",
+      "keywords": ["INFANTRY"],
+      "statuses": [],
+      "abilities": [],
+      "profiles": {
+        "ranged": {
+          "id": "wp_bolt_rifle",
+          "name": "Bolt Rifle",
+          "A": 2,
+          "BS": 3,
+          "S": 4,
+          "AP": -1,
+          "D": 1,
+          "keywords": ["RAPID FIRE 1"]
+        },
+        "melee": {
+          "id": "wp_close_combat",
+          "name": "Close Combat Weapon",
+          "A": 3,
+          "WS": 3,
+          "S": 4,
+          "AP": 0,
+          "D": 1,
+          "keywords": []
+        }
+      },
+      "stats": {
+        "M": 6,
+        "T": 4,
+        "Sv": 3,
+        "W": 2,
+        "Ld": 6,
+        "OC": 2
+      },
+      "models": {
+        "total": 5,
+        "remaining": 5
+      },
+      "eligibility": {
+        "shoot": { "prohibitions": [] },
+        "charge": { "prohibitions": [] }
+      }
+    },
+    "u2": {
+      "id": "u2",
+      "owner": "B",
+      "name": "Ork Boyz",
+      "keywords": ["INFANTRY"],
+      "statuses": [],
+      "abilities": [],
+      "profiles": {
+        "ranged": {
+          "id": "wp_slugga",
+          "name": "Slugga",
+          "A": 1,
+          "BS": 5,
+          "S": 4,
+          "AP": 0,
+          "D": 1,
+          "keywords": ["PISTOL"]
+        },
+        "melee": {
+          "id": "wp_choppa",
+          "name": "Choppa",
+          "A": 3,
+          "WS": 3,
+          "S": 4,
+          "AP": -1,
+          "D": 1,
+          "keywords": []
+        }
+      },
+      "stats": {
+        "M": 6,
+        "T": 5,
+        "Sv": 5,
+        "W": 1,
+        "Ld": 7,
+        "OC": 2
+      },
+      "models": {
+        "total": 10,
+        "remaining": 10
+      },
+      "eligibility": {
+        "shoot": { "prohibitions": [] },
+        "charge": { "prohibitions": [] }
+      }
+    }
+  },
+  "battleshock": {
+    "pendingUnits": [],
+    "currentUnitId": null,
+    "rollResult": null
+  },
+  "charge": {
+    "targetUnitId": null,
+    "rollResult": null,
+    "distance": null
+  },
+  "usage": {},
+  "windows": {},
+  "statuses": {}
+}
