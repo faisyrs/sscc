@@ -17,7 +17,7 @@
       "owner": "A",
       "name": "Intercessor Squad",
       "keywords": ["INFANTRY"],
-      "statuses": [],
+      "statuses": {},
       "abilities": [],
       "profiles": {
         "ranged": {
@@ -63,7 +63,7 @@
       "owner": "B",
       "name": "Ork Boyz",
       "keywords": ["INFANTRY"],
-      "statuses": [],
+      "statuses": {},
       "abilities": [],
       "profiles": {
         "ranged": {

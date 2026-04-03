@@ -1502,7 +1502,7 @@ selectors:
       "owner": "A",
       "name": "Attacker Unit",
       "keywords": ["INFANTRY"],
-      "statuses": [],
+      "statuses": {},
       "abilities": ["Lethal Hits", "Sustained 1"],
       "profiles": {
         "melee": {
@@ -1525,7 +1525,7 @@ selectors:
       "owner": "B",
       "name": "Defender Unit",
       "keywords": ["INFANTRY"],
-      "statuses": [],
+      "statuses": {},
       "abilities": [],
       "profiles": {},
       "stats": {
