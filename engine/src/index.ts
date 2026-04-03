@@ -15,3 +15,5 @@ export { SSCCEngine, validateDieSelection } from "./engine/index.js";
 export { loadPack } from "./loader/index.js";
 export { Logger } from "./logger/index.js";
 export { SeededRNG } from "./rng/index.js";
+export type { ChoiceSnapshot, UndoCheck, UndoResult } from "./types/choices.js";
+export type { RNGSnapshot } from "./rng/index.js";
