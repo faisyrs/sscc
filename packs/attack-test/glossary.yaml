@@ -1,0 +1,7 @@
+keywords:
+  - INFANTRY
+
+selectors:
+  attacking_unit:
+    kind: unit
+    byEventParam: unitId

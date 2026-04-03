@@ -1,0 +1,20 @@
+{
+  "players": ["attacker", "defender"],
+  "turnPlayer": "attacker",
+  "resources": {
+    "attacker": { "cp": 1 },
+    "defender": { "cp": 0 }
+  },
+  "units": {
+    "tactical_squad": {
+      "id": "tactical_squad",
+      "owner": "attacker",
+      "statuses": {},
+      "keywords": ["INFANTRY"],
+      "attacks": 4,
+      "ws": 3
+    }
+  },
+  "currentAttack": {},
+  "usage": {}
+}

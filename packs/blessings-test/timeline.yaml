@@ -1,0 +1,5 @@
+timeline:
+  - event: BattleRoundStart
+  - event: BlessingsOfKhorne
+
+subSequences: {}

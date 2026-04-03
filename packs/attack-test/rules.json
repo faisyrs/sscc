@@ -1,0 +1,26 @@
+[
+  {
+    "id": "setup_attack",
+    "scope": "attack",
+    "trigger": { "event": "SetupAttack" },
+    "when": { "all": [] },
+    "effect": [
+      { "setValue": { "path": "$.currentAttack.hits", "value": 0 } },
+      { "setValue": { "path": "$.currentAttack.autoWounds", "value": 0 } },
+      { "setValue": { "path": "$.currentAttack.misses", "value": 0 } }
+    ],
+    "precedence": { "priority": 0, "strategy": "stack" },
+    "provenance": { "source": "test" }
+  },
+  {
+    "id": "roll_to_hit",
+    "scope": "attack",
+    "trigger": { "event": "RollToHit" },
+    "when": { "all": [] },
+    "effect": [
+      { "roll": { "count": { "path": "$.units.tactical_squad.attacks" }, "sides": 6, "storePath": "$.currentAttack.hitRolls" } }
+    ],
+    "precedence": { "priority": 0, "strategy": "stack" },
+    "provenance": { "source": "test" }
+  }
+]

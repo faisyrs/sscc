@@ -1,0 +1,5 @@
+id: blessings-test
+name: Blessings Test Pack
+version: 0.1.0
+engine_version: "^0.1.0"
+dependencies: []

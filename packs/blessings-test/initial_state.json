@@ -1,0 +1,10 @@
+{
+  "players": ["worldeaters"],
+  "turnPlayer": "worldeaters",
+  "resources": {
+    "worldeaters": { "cp": 2 }
+  },
+  "units": {},
+  "blessingsActivated": 0,
+  "usage": {}
+}
