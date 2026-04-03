@@ -1,0 +1,46 @@
+{
+  "players": ["attacker", "defender"],
+  "turnPlayer": "attacker",
+  "battleRound": 1,
+  "resources": {
+    "attacker": { "cp": 3 },
+    "defender": { "cp": 2 }
+  },
+  "units": {
+    "tactical_squad": {
+      "id": "tactical_squad",
+      "owner": "attacker",
+      "keywords": ["INFANTRY", "IMPERIUM"],
+      "statuses": {},
+      "attacks": 4,
+      "ws": 3
+    },
+    "khorne_berzerkers": {
+      "id": "khorne_berzerkers",
+      "owner": "attacker",
+      "keywords": ["INFANTRY", "KHORNE"],
+      "statuses": {},
+      "attacks": 3,
+      "ws": 3
+    },
+    "intercessor_squad": {
+      "id": "intercessor_squad",
+      "owner": "defender",
+      "keywords": ["INFANTRY", "PRIMARIS"],
+      "statuses": {},
+      "attacks": 2,
+      "ws": 3
+    },
+    "hellblaster_squad": {
+      "id": "hellblaster_squad",
+      "owner": "defender",
+      "keywords": ["INFANTRY", "PRIMARIS"],
+      "statuses": {},
+      "attacks": 3,
+      "ws": 3
+    }
+  },
+  "currentAttack": {},
+  "blessingsActivated": 0,
+  "usage": {}
+}

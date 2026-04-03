@@ -1,0 +1,137 @@
+[
+  {
+    "id": "setup_attack",
+    "scope": "attack",
+    "trigger": { "event": "RollToHit" },
+    "when": { "all": [] },
+    "effect": [
+      { "setValue": { "path": "$.currentAttack.hits", "value": 0 } },
+      { "roll": { "count": { "path": "$.units.tactical_squad.attacks" }, "sides": 6, "storePath": "$.currentAttack.hitRolls" } }
+    ],
+    "precedence": { "priority": 0, "strategy": "stack" },
+    "provenance": { "source": "demo" }
+  },
+  {
+    "id": "offer_stratagem_reroll",
+    "scope": "global",
+    "trigger": { "event": "CommandPhaseStart" },
+    "when": {
+      "resourceAtLeast": { "player": { "literal": "attacker" }, "resource": "cp", "amount": 1 }
+    },
+    "effect": [
+      { "addChoice": {
+          "id": "command_reroll_stratagem",
+          "label": "Command Re-roll Stratagem (1 CP)",
+          "actionRef": "do_command_reroll",
+          "costs": { "cp": 1 }
+      } }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "demo" }
+  },
+  {
+    "id": "do_command_reroll",
+    "scope": "global",
+    "trigger": { "event": "ChoiceSelected" },
+    "when": {
+      "eventParamEquals": { "param": "choiceId", "value": "command_reroll_stratagem" }
+    },
+    "effect": [
+      { "consumeUsage": { "scope": "turn", "key": "command_reroll" } },
+      { "appendLogNote": { "message": "Command Re-roll Stratagem activated" } }
+    ],
+    "precedence": { "priority": 0, "strategy": "stack" },
+    "provenance": { "source": "demo" }
+  },
+  {
+    "id": "roll_blessings",
+    "scope": "global",
+    "trigger": { "event": "BlessingsOfKhorne" },
+    "when": { "all": [] },
+    "effect": [
+      { "roll": { "count": 8, "sides": 6, "storePath": "$.blessingsRoll", "defaults": { "rerolled": false, "spent": false } } },
+      { "emit": { "eventId": "BlessingsChoices" } }
+    ],
+    "precedence": { "priority": 0, "strategy": "stack" },
+    "provenance": { "source": "World Eaters" }
+  },
+  {
+    "id": "offer_warp_blades",
+    "scope": "global",
+    "trigger": { "event": "BlessingsChoices" },
+    "when": {
+      "all": [
+        { "any": [
+          { "poolContainsPattern": { "pool": "$.blessingsRoll", "filter": { "spent": false }, "pattern": { "kind": "double", "minValue": 5 } } },
+          { "poolContainsPattern": { "pool": "$.blessingsRoll", "filter": { "spent": false }, "pattern": { "kind": "triple" } } }
+        ] },
+        { "not": { "counterAtLeast": { "path": "$.blessingsActivated", "value": 2 } } }
+      ]
+    },
+    "effect": [
+      { "addChoice": {
+          "id": "warp_blades",
+          "label": "Warp Blades (double 5+ or triple)",
+          "actionRef": "do_activate_warp_blades",
+          "selectionFrom": { "path": "$.blessingsRoll" },
+          "selectionFilter": { "spent": false },
+          "pick": 2
+      } }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "World Eaters" }
+  },
+  {
+    "id": "offer_wrathful_devotion",
+    "scope": "global",
+    "trigger": { "event": "BlessingsChoices" },
+    "when": {
+      "all": [
+        { "poolContainsPattern": { "pool": "$.blessingsRoll", "filter": { "spent": false }, "pattern": { "kind": "double" } } },
+        { "not": { "counterAtLeast": { "path": "$.blessingsActivated", "value": 2 } } }
+      ]
+    },
+    "effect": [
+      { "addChoice": {
+          "id": "wrathful_devotion",
+          "label": "Wrathful Devotion (any double)",
+          "actionRef": "do_activate_wrathful_devotion",
+          "selectionFrom": { "path": "$.blessingsRoll" },
+          "selectionFilter": { "spent": false },
+          "pick": 2
+      } }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "World Eaters" }
+  },
+  {
+    "id": "do_activate_warp_blades",
+    "scope": "global",
+    "trigger": { "event": "ChoiceSelected" },
+    "when": {
+      "eventParamEquals": { "param": "choiceId", "value": "warp_blades" }
+    },
+    "effect": [
+      { "spendDice": { "poolPath": "$.blessingsRoll", "dieIndices": { "fromChoice": "selectedDice" } } },
+      { "modifyCounter": { "path": "$.blessingsActivated", "delta": 1 } },
+      { "setValue": { "path": "$.blessings.warpBlades", "value": true } }
+    ],
+    "precedence": { "priority": 0, "strategy": "stack" },
+    "provenance": { "source": "World Eaters" }
+  },
+  {
+    "id": "do_activate_wrathful_devotion",
+    "scope": "global",
+    "trigger": { "event": "ChoiceSelected" },
+    "when": {
+      "eventParamEquals": { "param": "choiceId", "value": "wrathful_devotion" }
+    },
+    "effect": [
+      { "spendDice": { "poolPath": "$.blessingsRoll", "dieIndices": { "fromChoice": "selectedDice" } } },
+      { "modifyCounter": { "path": "$.blessingsActivated", "delta": 1 } },
+      { "setValue": { "path": "$.blessings.wrathfulDevotion", "value": true } }
+    ],
+    "precedence": { "priority": 0, "strategy": "stack" },
+    "provenance": { "source": "World Eaters" }
+  }
+]

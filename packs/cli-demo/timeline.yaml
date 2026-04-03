@@ -1,0 +1,18 @@
+timeline:
+  - event: StartOfGame
+
+  - event: BattleRoundStart
+
+  - event: CommandPhaseStart
+
+  - event: ShootingPhaseStart
+
+  - event: RollToHit
+
+  - event: BlessingsOfKhorne
+
+  - event: BlessingsChoices
+
+  - event: EndOfGame
+
+subSequences: {}

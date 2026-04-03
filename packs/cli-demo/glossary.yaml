@@ -1,0 +1,10 @@
+keywords:
+  - INFANTRY
+  - IMPERIUM
+  - KHORNE
+  - PRIMARIS
+
+selectors:
+  attacking_unit:
+    kind: unit
+    byEventParam: unitId
