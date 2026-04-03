@@ -59,6 +59,28 @@ export function getConflictDomain(effect: Effect): string | null {
   if ("emit" in effect) return null;
   if ("appendLogNote" in effect) return null;
 
+  if ("roll" in effect) {
+    return `roll:${effect.roll.storePath}`;
+  }
+  if ("rerollDie" in effect) {
+    const idx = typeof effect.rerollDie.dieIndex === "number"
+      ? effect.rerollDie.dieIndex
+      : effect.rerollDie.dieIndex.path;
+    return `rerollDie:${effect.rerollDie.poolPath}:${idx}`;
+  }
+  if ("rerollPool" in effect) {
+    return `rerollPool:${effect.rerollPool.poolPath}`;
+  }
+  if ("spendDice" in effect) {
+    const indices = Array.isArray(effect.spendDice.dieIndices)
+      ? effect.spendDice.dieIndices.slice().sort().join(",")
+      : effect.spendDice.dieIndices.fromChoice;
+    return `spendDice:${effect.spendDice.poolPath}:${indices}`;
+  }
+  if ("setSeed" in effect) {
+    return "setSeed";
+  }
+
   return null;
 }
 
