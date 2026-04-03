@@ -13,3 +13,4 @@ export {
 export { SSCCEngine } from "./engine/index.js";
 export { loadPack } from "./loader/index.js";
 export { Logger } from "./logger/index.js";
+export { SeededRNG } from "./rng/index.js";

@@ -32,7 +32,9 @@ export type PredicateNode =
   | { counterAtLeast: { path: string; value: number } }
   | { counterEquals: { path: string; value: number } }
   | { tagPresent: { target: TargetRef; tag: string } }
-  | { selector: { id: string } };
+  | { selector: { id: string } }
+  | { poolContainsPattern: { pool: string; filter?: Record<string, unknown>; pattern: { kind: "double" | "triple"; minValue?: number } } }
+  | { diePoolCount: { pool: string; filter?: Record<string, unknown>; min: number } };
 
 // --- Effects ---
 
@@ -43,7 +45,7 @@ export type Effect =
   | { modifyCounter: { path: string; delta?: number; deltaFromPath?: string } }
   | { addProhibition: { target: TargetRef; action: string; reason: string } }
   | { removeProhibition: { target: TargetRef; action: string; reason: string } }
-  | { addChoice: { id: string; label: string; actionRef: string; limits?: Record<string, unknown>; costs?: Record<string, unknown>; selectionFrom?: TargetRef } }
+  | { addChoice: { id: string; label: string; actionRef: string; limits?: Record<string, unknown>; costs?: Record<string, unknown>; selectionFrom?: TargetRef; selectionFilter?: Record<string, unknown>; pick?: number } }
   | { consumeUsage: { scope: string; key: string } }
   | { resetUsage: { scope: string; keys: string[] } }
   | { emit: { eventId: string; params?: Record<string, unknown> } }
@@ -51,7 +53,12 @@ export type Effect =
   | { spendResource: { target: PlayerRef; resource: string; amount: number } }
   | { appendLogNote: { message: string } }
   | { ensureExists: { path: string; defaultValue: unknown } }
-  | { mergeInto: { path: string; value: Record<string, unknown> } };
+  | { mergeInto: { path: string; value: Record<string, unknown> } }
+  | { roll: { count: number | { path: string }; sides?: number; storePath: string; defaults?: Record<string, unknown> } }
+  | { rerollDie: { poolPath: string; dieIndex: number | { path: string }; sides?: number } }
+  | { rerollPool: { poolPath: string; sides?: number } }
+  | { spendDice: { poolPath: string; dieIndices: number[] | { fromChoice: string } } }
+  | { setSeed: { seed: number } };
 
 /** The single key that identifies which verb an effect uses. */
 export type EffectVerb = Effect extends infer E

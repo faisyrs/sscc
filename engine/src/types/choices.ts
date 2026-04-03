@@ -18,4 +18,6 @@ export interface ChoiceInstance {
   selectionFrom?: TargetRef;
   selectedArgs?: Record<string, unknown>;
   costs?: Record<string, number>;
+  selectionFilter?: Record<string, unknown>;
+  pick?: number;
 }
