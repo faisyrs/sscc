@@ -436,7 +436,7 @@ Predicates are composable using:
 {
   "all": [
     { "hasStatus": { "target": { "selector": "active_player_units" }, "key": "advanced_move" } },
-    { "not": { "windowOpen": { "id": "OverwatchWindow" } } }
+    { "not": { "pathEquals": { "path": "$.someFlag", "value": true } } }
   ]
 }
 ```
@@ -1090,8 +1090,6 @@ timeline:
 
   - event: EndOfGame
 
-windows: []
-
 subSequences: {}
 ```
 
@@ -1208,7 +1206,7 @@ The goal of this example is **not** to fully encode 40K. The goal is to show the
 
 This example demonstrates:
 - phases as events with structured timeline nodes
-- reaction windows with choice lifecycle
+- choices with cost pre-computation and lifecycle
 - state-based restrictions with typed predicates
 - reason-based eligibility
 - overrides via patches
@@ -1326,11 +1324,6 @@ timeline:
           params: [round]
 
   - event: EndOfGame
-
-windows:
-  - id: OverwatchWindow
-    opens_on: ChargeDeclarationsEnded
-    closes_on: FightPhaseStarted
 
 subSequences:
   resolveHitRolls:
@@ -1456,9 +1449,6 @@ selectors:
   "resources": {
     "A": { "cp": 1 },
     "B": { "cp": 1 }
-  },
-  "windows": {
-    "OverwatchWindow": false
   },
   "armyStatuses": {
     "A": [],
@@ -1763,7 +1753,7 @@ selectors:
 ]
 ```
 
-No window open/close rules needed. The `resourceAtLeast` predicate prevents the choice from being offered when CP is insufficient. The engine's cost pre-computation provides a second layer of guarantee — choices with costs that the player cannot afford are suppressed at offer time. Usage tracking (`consumeUsage`) prevents repeat use within a phase.
+The `resourceAtLeast` predicate prevents the choice from being offered when CP is insufficient. The engine's cost pre-computation provides a second layer of guarantee — choices with costs that the player cannot afford are suppressed at offer time. Usage tracking (`consumeUsage`) prevents repeat use within a phase.
 
 ### 5.5 Fight attack micro-pipeline
 
@@ -2110,7 +2100,7 @@ Validate with Hello Pack.
 
 ## Milestone 2
 
-Remove windows, add choice costs:
+Add choice costs:
 - Choice cost pre-computation (suppress unaffordable choices at offer time)
 - Auto-deduct costs on choice selection
 - Overwatch example using pure state + events

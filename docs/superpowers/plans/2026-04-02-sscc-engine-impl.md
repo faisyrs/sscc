@@ -229,7 +229,7 @@ export interface Provenance {
 
 // --- Rule ---
 
-export type RuleScope = "global" | "player" | "entity" | "unit" | "attack" | "window";
+export type RuleScope = "global" | "player" | "entity" | "unit" | "attack";
 
 export interface Rule {
   id: string;
@@ -3446,8 +3446,6 @@ timeline:
           params: [round]
 
   - event: EndOfGame
-
-windows: []
 
 subSequences: {}
 ```

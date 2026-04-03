@@ -474,7 +474,6 @@ charge:
   },
   "units": {},
   "usage": {},
-  "windows": {},
   "statuses": {}
 }
 ```
@@ -568,7 +567,7 @@ Same pattern repeated for Shooting, Charge, Fight.
 ## 9. What the Skeleton Does NOT Include
 
 - Attack resolution pipelines (hit/wound/save/damage subSequences)
-- Reaction windows (Overwatch, Heroic Intervention)
+- Reactions (Overwatch, Heroic Intervention)
 - Stratagems
 - Faction rules / patches
 - Army list loading / unit data population

@@ -2,71 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Remove the window concept from the SSCC engine and add choice cost pre-computation so every offered choice is guaranteed affordable.
+**Goal:** Add choice cost pre-computation so every offered choice is guaranteed affordable.
 
-**Architecture:** Modify existing engine modules — no new modules. Add `costs` to `ChoiceInstance`, filter unaffordable choices in `evaluateEvent`, deduct costs in `applyChoice`. Remove `"window"` from scope type. Clean up pack data and spec.
+**Architecture:** Modify existing engine modules — no new modules. Add `costs` to `ChoiceInstance`, filter unaffordable choices in `evaluateEvent`, deduct costs in `applyChoice`.
 
 **Tech Stack:** TypeScript, Vitest
 
 ---
 
-## Task 1: Remove Window References
-
-Remove the window concept from types, pack data, and spec.
-
-**Files:**
-- Modify: `engine/src/types/rules.ts:82`
-- Modify: `packs/wh40k-10e-core-turn/timeline.yaml:44`
-- Modify: `packs/wh40k-10e-core-turn/initial_state.json:119`
-
-- [ ] **Step 1.1** -- Remove `"window"` from `RuleScope` in `engine/src/types/rules.ts`
-
-Change line 82 from:
-
-```typescript
-export type RuleScope = "global" | "player" | "entity" | "unit" | "attack" | "window";
-```
-
-to:
-
-```typescript
-export type RuleScope = "global" | "player" | "entity" | "unit" | "attack";
-```
-
-- [ ] **Step 1.2** -- Remove `windows: []` from `packs/wh40k-10e-core-turn/timeline.yaml`
-
-Delete line 44:
-
-```yaml
-windows: []
-```
-
-- [ ] **Step 1.3** -- Remove `"windows": {}` from `packs/wh40k-10e-core-turn/initial_state.json`
-
-Delete the line:
-
-```json
-  "windows": {},
-```
-
-- [ ] **Step 1.4** -- Verify compilation and existing tests still pass
-
-```bash
-cd engine && npx tsc --noEmit && npx vitest run
-```
-
-Expected: all 97 tests pass, no type errors.
-
-- [ ] **Step 1.5** -- Commit
-
-```bash
-git add engine/src/types/rules.ts packs/wh40k-10e-core-turn/timeline.yaml packs/wh40k-10e-core-turn/initial_state.json
-git commit -m "refactor: remove window concept from engine types and pack data"
-```
-
----
-
-## Task 2: Add Costs to ChoiceInstance
+## Task 1: Add Costs to ChoiceInstance
 
 Store costs on choice instances so the engine can check and deduct them.
 
@@ -74,7 +18,7 @@ Store costs on choice instances so the engine can check and deduct them.
 - Modify: `engine/src/types/choices.ts`
 - Modify: `engine/src/rules/effects.ts`
 
-- [ ] **Step 2.1** -- Add `costs` field to `ChoiceInstance` in `engine/src/types/choices.ts`
+- [ ] **Step 1.1** -- Add `costs` field to `ChoiceInstance` in `engine/src/types/choices.ts`
 
 Add the `costs` field after `selectedArgs`:
 
@@ -94,7 +38,7 @@ export interface ChoiceInstance {
 }
 ```
 
-- [ ] **Step 2.2** -- Pass costs through in effect executor (`engine/src/rules/effects.ts`)
+- [ ] **Step 1.2** -- Pass costs through in effect executor (`engine/src/rules/effects.ts`)
 
 In the `addChoice` handler (around line 138), add `costs` to the `ChoiceInstance`:
 
@@ -131,7 +75,7 @@ to:
     };
 ```
 
-- [ ] **Step 2.3** -- Verify compilation
+- [ ] **Step 1.3** -- Verify compilation
 
 ```bash
 cd engine && npx tsc --noEmit
@@ -139,7 +83,7 @@ cd engine && npx tsc --noEmit
 
 Expected: no type errors.
 
-- [ ] **Step 2.4** -- Commit
+- [ ] **Step 1.4** -- Commit
 
 ```bash
 git add engine/src/types/choices.ts engine/src/rules/effects.ts
@@ -148,7 +92,7 @@ git commit -m "feat: store costs on ChoiceInstance for cost pre-computation"
 
 ---
 
-## Task 3: Cost Pre-Computation and Deduction
+## Task 2: Cost Pre-Computation and Deduction
 
 Filter unaffordable choices at offer time. Deduct costs on selection.
 
@@ -156,7 +100,7 @@ Filter unaffordable choices at offer time. Deduct costs on selection.
 - Modify: `engine/src/engine/index.ts`
 - Create: `engine/tests/unit/engine-costs.test.ts`
 
-- [ ] **Step 3.1** -- Write cost helper functions in `engine/src/engine/index.ts`
+- [ ] **Step 2.1** -- Write cost helper functions in `engine/src/engine/index.ts`
 
 Add these two functions before the `SSCCEngine` class definition:
 
@@ -213,7 +157,7 @@ to:
 import { get, set, expireStatuses } from "../state/index.js";
 ```
 
-- [ ] **Step 3.2** -- Add cost filtering in `evaluateEvent`
+- [ ] **Step 2.2** -- Add cost filtering in `evaluateEvent`
 
 In the `evaluateEvent` method, replace the "Step 5: Add new choices to state" block:
 
@@ -264,7 +208,7 @@ to:
     }
 ```
 
-- [ ] **Step 3.3** -- Add cost deduction in `applyChoice`
+- [ ] **Step 2.3** -- Add cost deduction in `applyChoice`
 
 In the `applyChoice` method, add cost verification and deduction before the `selectChoice` call:
 
@@ -323,7 +267,7 @@ to:
     this.state = newState;
 ```
 
-- [ ] **Step 3.4** -- Write failing tests in `engine/tests/unit/engine-costs.test.ts`
+- [ ] **Step 2.4** -- Write failing tests in `engine/tests/unit/engine-costs.test.ts`
 
 ```typescript
 import { describe, it, expect } from "vitest";
@@ -592,7 +536,7 @@ describe("Choice cost pre-computation", () => {
 });
 ```
 
-- [ ] **Step 3.5** -- Run tests to verify they fail
+- [ ] **Step 2.5** -- Run tests to verify they fail
 
 ```bash
 cd engine && npx vitest run tests/unit/engine-costs.test.ts
@@ -600,7 +544,7 @@ cd engine && npx vitest run tests/unit/engine-costs.test.ts
 
 Expected: tests fail because cost filtering and deduction are not yet wired in (Steps 3.1-3.3 describe the code changes — implement them before this step if following TDD strictly, or implement them first and then run).
 
-- [ ] **Step 3.6** -- Run all tests to verify everything passes
+- [ ] **Step 2.6** -- Run all tests to verify everything passes
 
 ```bash
 cd engine && npx vitest run
@@ -608,7 +552,7 @@ cd engine && npx vitest run
 
 Expected: all existing tests pass plus the 5 new cost tests.
 
-- [ ] **Step 3.7** -- Commit
+- [ ] **Step 2.7** -- Commit
 
 ```bash
 git add engine/src/engine/index.ts engine/tests/unit/engine-costs.test.ts
@@ -617,7 +561,7 @@ git commit -m "feat: add choice cost pre-computation and deduction"
 
 ---
 
-## Task 4: Overwatch Integration Test
+## Task 3: Overwatch Integration Test
 
 End-to-end test with a minimal pack that demonstrates overwatch as pure SSCC.
 
@@ -629,7 +573,7 @@ End-to-end test with a minimal pack that demonstrates overwatch as pure SSCC.
 - Create: `packs/overwatch-test/rules.json`
 - Create: `engine/tests/integration/overwatch.test.ts`
 
-- [ ] **Step 4.1** -- Create `packs/overwatch-test/manifest.yaml`
+- [ ] **Step 3.1** -- Create `packs/overwatch-test/manifest.yaml`
 
 ```yaml
 id: overwatch-test
@@ -639,7 +583,7 @@ engine_version: "^0.1.0"
 dependencies: []
 ```
 
-- [ ] **Step 4.2** -- Create `packs/overwatch-test/timeline.yaml`
+- [ ] **Step 3.2** -- Create `packs/overwatch-test/timeline.yaml`
 
 A minimal timeline: StartOfGame, one round, one player turn with a charge phase containing `ChargeDeclarationsEnded` and `ChargePhaseEnded`, then EndOfGame.
 
@@ -668,7 +612,7 @@ timeline:
 subSequences: {}
 ```
 
-- [ ] **Step 4.3** -- Create `packs/overwatch-test/glossary.yaml`
+- [ ] **Step 3.3** -- Create `packs/overwatch-test/glossary.yaml`
 
 ```yaml
 keywords: []
@@ -680,7 +624,7 @@ reason_keys: {}
 selectors: {}
 ```
 
-- [ ] **Step 4.4** -- Create `packs/overwatch-test/initial_state.json`
+- [ ] **Step 3.4** -- Create `packs/overwatch-test/initial_state.json`
 
 ```json
 {
@@ -693,7 +637,7 @@ selectors: {}
 }
 ```
 
-- [ ] **Step 4.5** -- Create `packs/overwatch-test/rules.json`
+- [ ] **Step 3.5** -- Create `packs/overwatch-test/rules.json`
 
 ```json
 [
@@ -767,7 +711,7 @@ selectors: {}
 ]
 ```
 
-- [ ] **Step 4.6** -- Write `engine/tests/integration/overwatch.test.ts`
+- [ ] **Step 3.6** -- Write `engine/tests/integration/overwatch.test.ts`
 
 ```typescript
 import { describe, it, expect } from "vitest";
@@ -778,7 +722,7 @@ import { join } from "node:path";
 
 const PACK_PATH = join(import.meta.dirname, "../../../packs/overwatch-test");
 
-describe("Overwatch without windows", () => {
+describe("Overwatch with cost pre-computation", () => {
   it("loads the overwatch test pack", async () => {
     const result = await loadPack(PACK_PATH);
     expect(result.ok).toBe(true);
@@ -862,7 +806,7 @@ describe("Overwatch without windows", () => {
 });
 ```
 
-- [ ] **Step 4.7** -- Run integration tests
+- [ ] **Step 3.7** -- Run integration tests
 
 ```bash
 cd engine && npx vitest run tests/integration/overwatch.test.ts
@@ -870,7 +814,7 @@ cd engine && npx vitest run tests/integration/overwatch.test.ts
 
 Expected: all 3 tests pass.
 
-- [ ] **Step 4.8** -- Run the full test suite
+- [ ] **Step 3.8** -- Run the full test suite
 
 ```bash
 cd engine && npx vitest run
@@ -878,7 +822,7 @@ cd engine && npx vitest run
 
 Expected: all tests pass (92 unit + 5 new cost unit + 5 existing integration + 3 new overwatch integration).
 
-- [ ] **Step 4.9** -- Commit
+- [ ] **Step 3.9** -- Commit
 
 ```bash
 git add packs/overwatch-test/ engine/tests/integration/overwatch.test.ts
@@ -887,51 +831,35 @@ git commit -m "test: add overwatch integration test using pure state + events"
 
 ---
 
-## Task 5: Update Specification Document
+## Task 4: Update Specification Document
 
-Remove window references from `SSCC_ENGINE_SPECIFICATION.md`.
+Add cost pre-computation content to `SSCC_ENGINE_SPECIFICATION.md`.
 
 **Files:**
 - Modify: `SSCC_ENGINE_SPECIFICATION.md`
 
-- [ ] **Step 5.1** -- Remove window-related content from the spec
+- [ ] **Step 4.1** -- Add cost pre-computation content to the spec
 
 Make these changes to `SSCC_ENGINE_SPECIFICATION.md`:
 
-1. **Section 2 (High-Level System Requirements)**: In the "reaction windows with choice lifecycle" bullet, change to "choices with cost pre-computation and lifecycle"
+1. **Section 2 (High-Level System Requirements)**: Update the choice lifecycle bullet to mention cost pre-computation.
 
-2. **Section 1 (Core Definitions, State examples)**: Remove "reaction windows that are currently open"
+2. **Section 11 (Choice Lifecycle)**: Add cost fields and cost pre-computation behavior.
 
-3. **Section 4.2 (timeline.yaml)**: Remove "windows (reaction/interrupt windows)"
+3. **Milestone 2 in Part V**: Update to say "Add choice cost pre-computation".
 
-4. **Section 6 (System Events)**: Remove `windowId` from `ChoiceSelected` params. Remove "window closed" from `ChoiceExpired` description.
-
-5. **Section 8 (Predicate Type System)**: Remove the `windowOpen` and `windowClosed` rows from the predicate reference table.
-
-6. **Remove Section 9.4** ("Event and Window Control") entirely -- delete `openWindow` and `closeWindow` effect definitions.
-
-7. **Section 11 (Choice Lifecycle)**: Remove `expiresOnWindowClose` from choice instance fields table. Remove "Its **window closes**" from the expiry list.
-
-8. **Section 14 (Rulelet Shape)**: Remove `"window"` from the scope values list.
-
-9. **Section 16.2 (Event Sequencer)**: Remove "Opens/closes windows" from the responsibilities list.
-
-10. **Section 5.4**: Replace the "Reaction window example" with the state-driven overwatch pattern from the design spec (Section 4 of the Milestone 2 design). Title it "Overwatch example (state-driven)".
-
-11. **Milestone 2 in Part V**: Update to say "Add choice cost pre-computation" instead of "Add windows and costs".
-
-- [ ] **Step 5.2** -- Commit
+- [ ] **Step 4.2** -- Commit
 
 ```bash
 git add SSCC_ENGINE_SPECIFICATION.md
-git commit -m "docs: remove window concept from SSCC spec, add cost pre-computation"
+git commit -m "docs: add cost pre-computation to SSCC spec"
 ```
 
 ---
 
-## Task 6: Final Verification
+## Task 5: Final Verification
 
-- [ ] **Step 6.1** -- Run the full test suite one final time
+- [ ] **Step 5.1** -- Run the full test suite one final time
 
 ```bash
 cd engine && npx tsc --noEmit && npx vitest run
@@ -939,10 +867,10 @@ cd engine && npx tsc --noEmit && npx vitest run
 
 Expected: clean compilation, all tests pass.
 
-- [ ] **Step 6.2** -- Verify no window references remain in engine code
+- [ ] **Step 5.2** -- Run lint and verify no issues
 
 ```bash
-grep -r "window" engine/src/ --include="*.ts" -i
+cd engine && npx tsc --noEmit
 ```
 
-Expected: no matches (or only the word "window" in unrelated contexts like comments).
+Expected: no type errors.

@@ -267,8 +267,6 @@ timeline:
 
   - event: EndOfGame
 
-windows: []
-
 subSequences:
   commandPhase:
     params: [player]
@@ -568,7 +566,6 @@ Defines the state schema contract. All `path` references in rules must resolve a
     "distance": null
   },
   "usage": {},
-  "windows": {},
   "statuses": {}
 }
 ```

@@ -25,7 +25,6 @@ From SSCC Engine Specification Part V:
 
 ## What Milestone 1 Does NOT Include
 
-- Windows (reaction/interrupt windows)
 - Choice costs and resource spending
 - Roll sub-sequences and RNG (`roll` effect verb)
 - `whyNot` API
@@ -137,7 +136,7 @@ Matches the SSCC spec Section 14 rulelet schema:
 ```typescript
 interface Rule {
   id: string;
-  scope: "global" | "player" | "entity" | "unit" | "attack" | "window";
+  scope: "global" | "player" | "entity" | "unit" | "attack";
   trigger: { event: string };
   when: PredicateNode;
   effect: Effect[];
@@ -192,7 +191,7 @@ type Effect =
   | { mergeInto: { path: string; value: object } };
 ```
 
-Note: `roll`, `openWindow`, `closeWindow` are excluded from Milestone 1.
+Note: `roll` is excluded from Milestone 1.
 
 ### Choice
 

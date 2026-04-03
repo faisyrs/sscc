@@ -6,7 +6,7 @@ import { join } from "node:path";
 
 const PACK_PATH = join(import.meta.dirname, "../../../packs/overwatch-test");
 
-describe("Overwatch without windows", () => {
+describe("Overwatch with choice costs", () => {
   it("loads the overwatch test pack", async () => {
     const result = await loadPack(PACK_PATH);
     expect(result.ok).toBe(true);

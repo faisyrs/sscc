@@ -12,6 +12,6 @@
 | SSCC-p00002 | State Management       | SSCC-p00002.md | 2662946a |
 | SSCC-p00003 | Timeline Execution     | SSCC-p00003.md | f8b46873 |
 | SSCC-p00004 | Rule Evaluation        | SSCC-p00004.md | 89685d5f |
-| SSCC-p00005 | Choice Management      | SSCC-p00005.md | 005067f5 |
+| SSCC-p00005 | Choice Management      | SSCC-p00005.md | 57719ae3 |
 | SSCC-p00006 | Data Pack System       | SSCC-p00006.md | 59342f6d |
 | SSCC-p00007 | Engine API             | SSCC-p00007.md | bcb565bd |
