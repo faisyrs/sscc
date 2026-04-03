@@ -138,7 +138,7 @@ export function executeEffect(
   }
 
   if ("addChoice" in effect) {
-    const { id, label, actionRef, limits, costs, selectionFrom } = effect.addChoice;
+    const { id, label, actionRef, limits, costs, selectionFrom, selectionFilter, pick } = effect.addChoice;
     choiceCounter++;
     const player = resolveCurrentPlayer(event);
     const choice: ChoiceInstance = {
@@ -152,6 +152,8 @@ export function executeEffect(
       state: "offered",
       selectionFrom,
       costs: costs as Record<string, number> | undefined,
+      selectionFilter: selectionFilter as Record<string, unknown> | undefined,
+      pick: pick as number | undefined,
     };
     result.newChoices.push(choice);
     return result;

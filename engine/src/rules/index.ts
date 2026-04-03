@@ -53,3 +53,4 @@ export { evaluatePredicate } from "./predicates.js";
 export { executeEffect, type EffectResult, type LogEntry } from "./effects.js";
 export { resolveConflicts, getConflictDomain, type ResolvedEffect } from "./conflicts.js";
 export { resolveTargetEntityIds, evaluateSelector, resolvePlayer } from "./predicates.js";
+export { readDiePool, dieMatchesFilter } from "./pool-helpers.js";

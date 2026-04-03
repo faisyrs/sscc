@@ -10,6 +10,8 @@ import type {
 import type { ChoiceInstance } from "../types/index.js";
 import { get, set, expireStatuses } from "../state/index.js";
 import { evaluate, executeEffect, type ResolvedEffect } from "../rules/index.js";
+import { SeededRNG } from "../rng/index.js";
+import { readDiePool, dieMatchesFilter } from "../rules/pool-helpers.js";
 import {
   addChoice,
   selectChoice,
@@ -71,11 +73,15 @@ export class SSCCEngine {
   private logger: Logger;
   private sequencer: Generator<GameEvent> | null = null;
   private lastTimelineEvent: GameEvent | null = null;
+  private rng: SeededRNG;
 
-  constructor(pack: LoadedPack) {
+  constructor(pack: LoadedPack, options?: { seed?: number }) {
     this.pack = pack;
     this.state = { ...pack.initialState, _choices: [] };
     this.logger = new Logger();
+    const seed = options?.seed ?? Date.now();
+    this.rng = new SeededRNG(seed);
+    this.logger.log("note", `Engine initialized with seed ${seed}`);
   }
 
   /**
@@ -148,6 +154,21 @@ export class SSCCEngine {
           costs: choice.costs,
         },
       });
+    }
+
+    // Validate multi-die selection if applicable
+    if (choice.pick && choice.selectionFrom && "path" in choice.selectionFrom) {
+      const selectedDice = args?.selectedDice as number[] | undefined;
+      if (!selectedDice) {
+        throw new Error(`Choice ${choice.choiceId} requires ${choice.pick} dice selection`);
+      }
+      validateDieSelection(
+        this.state,
+        choice.selectionFrom.path,
+        selectedDice,
+        choice.selectionFilter,
+        choice.pick,
+      );
     }
 
     const { state: newState, event } = selectChoice(
@@ -249,6 +270,7 @@ export class SSCCEngine {
         event,
         resolvedEffect.ruleId,
         this.pack.glossary,
+        this.rng,
       );
       state = effectResult.state;
       allEmittedEvents.push(...effectResult.emittedEvents);
@@ -294,5 +316,30 @@ export class SSCCEngine {
     }
 
     return state;
+  }
+}
+
+/**
+ * Validate a multi-die selection against pool state.
+ */
+export function validateDieSelection(
+  state: State,
+  poolPath: string,
+  selectedIndices: number[],
+  filter: Record<string, unknown> | undefined,
+  expectedPick: number,
+): void {
+  if (selectedIndices.length !== expectedPick) {
+    throw new Error(`Expected ${expectedPick} dice, got ${selectedIndices.length}`);
+  }
+  const dice = readDiePool(state, poolPath);
+  for (const idx of selectedIndices) {
+    const die = dice.find((d) => d.index === idx);
+    if (!die) {
+      throw new Error(`Die index ${idx} not found in pool at ${poolPath}`);
+    }
+    if (!dieMatchesFilter(die, filter)) {
+      throw new Error(`Die ${idx} does not match filter at ${poolPath}`);
+    }
   }
 }
