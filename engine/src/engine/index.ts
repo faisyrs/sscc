@@ -347,11 +347,12 @@ export class SSCCEngine {
     // Step 3: Evaluate rules
     const evalResult = evaluate(state, event, rules, this.pack.glossary);
 
-    if (evalResult.matchedRules.length > 0) {
-      this.logger.log("rules_matched", `${evalResult.matchedRules.length} rules matched`, {
-        eventId: event.id,
-        data: { ruleIds: evalResult.matchedRules.map((r) => r.id) },
-      });
+    for (const [ruleId, matched] of evalResult.predicateResults) {
+      this.logger.log(
+        matched ? "rules_matched" : "rule_skipped",
+        `Rule ${ruleId}: ${matched ? "matched" : "skipped"}`,
+        { eventId: event.id, ruleId },
+      );
     }
 
     // Step 4: Execute resolved effects
@@ -380,6 +381,11 @@ export class SSCCEngine {
           ruleId: entry.ruleId,
         });
       }
+      this.logger.log("effect_applied", `Effect: ${Object.keys(resolvedEffect.effect)[0]}`, {
+        eventId: event.id,
+        ruleId: resolvedEffect.ruleId,
+        data: { effect: resolvedEffect.effect },
+      });
     }
 
     // Step 5: Add new choices to state (filter unaffordable)
