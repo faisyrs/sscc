@@ -23,6 +23,7 @@ export interface EffectResult {
   emittedEvents: GameEvent[];
   newChoices: ChoiceInstance[];
   logEntries: LogEntry[];
+  usedRNG: boolean;
 }
 
 let choiceCounter = 0;
@@ -48,6 +49,7 @@ export function executeEffect(
     emittedEvents: [],
     newChoices: [],
     logEntries: [],
+    usedRNG: false,
   };
 
   if ("applyStatus" in effect) {
@@ -249,6 +251,7 @@ export function executeEffect(
 
   if ("roll" in effect) {
     if (!rng) throw new Error("roll effect requires RNG — pass seed to engine constructor");
+    result.usedRNG = true;
     const { sides = 6, storePath, defaults } = effect.roll;
     const count = resolveCount(effect.roll.count, state);
     let s = set(state, `${storePath}.count`, count);
@@ -271,6 +274,7 @@ export function executeEffect(
 
   if ("rerollDie" in effect) {
     if (!rng) throw new Error("rerollDie effect requires RNG");
+    result.usedRNG = true;
     const { poolPath, sides = 6 } = effect.rerollDie;
     const dieIndex = resolveCount(effect.rerollDie.dieIndex, state);
     const diePath = `${poolPath}.d${dieIndex}`;
@@ -291,6 +295,7 @@ export function executeEffect(
 
   if ("rerollPool" in effect) {
     if (!rng) throw new Error("rerollPool effect requires RNG");
+    result.usedRNG = true;
     const { poolPath, sides = 6 } = effect.rerollPool;
     const count = get(state, `${poolPath}.count`) as number;
     if (typeof count !== "number") throw new Error(`No pool count at ${poolPath}`);
@@ -337,6 +342,7 @@ export function executeEffect(
 
   if ("setSeed" in effect) {
     if (!rng) throw new Error("setSeed effect requires RNG");
+    result.usedRNG = true;
     const { seed } = effect.setSeed;
     rng.reseed(seed);
     result.logEntries.push({
