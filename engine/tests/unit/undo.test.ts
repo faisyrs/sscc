@@ -130,3 +130,17 @@ describe("undo stack lifecycle", () => {
     expect(engine.canUndoChoice("ci_1")).toBeNull();
   });
 });
+
+describe("passAllChoices", () => {
+  it("cancels all offered choices and allows advancing", async () => {
+    const engine = await setupBlessingsEngine(findSeedWithHighPair());
+    expect(engine.isPaused()).toBe(true);
+    const choicesBefore = engine.enumerateChoices();
+    expect(choicesBefore.length).toBeGreaterThan(0);
+
+    engine.passAllChoices();
+
+    expect(engine.enumerateChoices()).toHaveLength(0);
+    expect(engine.isPaused()).toBe(false);
+  });
+});

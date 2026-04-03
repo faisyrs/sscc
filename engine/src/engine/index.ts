@@ -283,6 +283,16 @@ export class SSCCEngine {
   }
 
   /**
+   * Cancel all currently offered choices (pass/decline).
+   * Allows the engine to advance past a choice point.
+   */
+  passAllChoices(): State {
+    this.state = cancelOfferedChoices(this.state);
+    this.logger.log("note", "All offered choices passed");
+    return this.state;
+  }
+
+  /**
    * Advance to the next timeline event.
    * Returns null if timeline is exhausted.
    * If choices are active, returns the paused state without advancing.
