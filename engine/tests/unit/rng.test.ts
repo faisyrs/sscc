@@ -61,4 +61,52 @@ describe("SeededRNG", () => {
     ];
     expect(results).toEqual([2, 6, 4, 1]);
   });
+
+  it("captureState returns seed and internal state", () => {
+    const rng = new SeededRNG(42);
+    rng.nextInt(1, 6); // advance the state
+    const snap = rng.captureState();
+    expect(snap.seed).toBe(42);
+    expect(typeof snap.internalState).toBe("number");
+  });
+
+  it("restoreState produces identical sequence from that point", () => {
+    const rng = new SeededRNG(42);
+    rng.nextInt(1, 6); // advance once
+    rng.nextInt(1, 6); // advance twice
+    const snap = rng.captureState();
+    const after = [rng.nextInt(1, 6), rng.nextInt(1, 6), rng.nextInt(1, 6)];
+
+    // Restore and verify same sequence
+    rng.restoreState(snap);
+    const replayed = [rng.nextInt(1, 6), rng.nextInt(1, 6), rng.nextInt(1, 6)];
+    expect(replayed).toEqual(after);
+  });
+
+  it("restoreState works across different RNG instances", () => {
+    const rng1 = new SeededRNG(668);
+    rng1.nextInt(1, 6); // advance
+    const snap = rng1.captureState();
+    const expected = [rng1.nextInt(1, 6), rng1.nextInt(1, 6)];
+
+    const rng2 = new SeededRNG(999); // different seed
+    rng2.restoreState(snap);
+    const actual = [rng2.nextInt(1, 6), rng2.nextInt(1, 6)];
+    expect(actual).toEqual(expected);
+  });
+
+  it("seed 668 sequence is preserved after captureState/restoreState round-trip", () => {
+    const rng = new SeededRNG(668);
+    const snap = rng.captureState();
+    rng.nextInt(1, 6); // consume some values
+    rng.nextInt(1, 6);
+    rng.restoreState(snap);
+    const results = [
+      rng.nextInt(1, 6),
+      rng.nextInt(1, 6),
+      rng.nextInt(1, 6),
+      rng.nextInt(1, 6),
+    ];
+    expect(results).toEqual([2, 6, 4, 1]);
+  });
 });
