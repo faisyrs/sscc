@@ -1,0 +1,32 @@
+timeline:
+  - event: StartOfGame
+
+  - repeat:
+      count: { path: "$.totalRounds" }
+      indexParam: round
+      body:
+        - event: RoundStarted
+          params: [round]
+
+        - forEach:
+            over: { kind: "player", from: "$.players" }
+            bindParam: player
+            body:
+              - event: TurnStarted
+                params: [player]
+              - sequence:
+                  - event: MainPhaseStarted
+                    params: [player]
+                  - event: MainPhaseEnded
+                    params: [player]
+              - event: TurnEnded
+                params: [player]
+
+        - event: RoundEnded
+          params: [round]
+
+  - event: EndOfGame
+
+windows: []
+
+subSequences: {}

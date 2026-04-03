@@ -1,0 +1,13 @@
+keywords: []
+
+statuses: {}
+
+reason_keys: {}
+
+selectors:
+  active_player:
+    kind: player
+    where:
+      pathEquals:
+        path: $.turnPlayer
+        valueFromEventParam: player

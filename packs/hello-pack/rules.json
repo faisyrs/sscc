@@ -1,0 +1,56 @@
+[
+  {
+    "id": "HELLO.Turn.SetPlayer.1",
+    "scope": "global",
+    "trigger": { "event": "TurnStarted" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "setValue": {
+          "path": "$.turnPlayer",
+          "valueFromEventParam": "player"
+        }
+      }
+    ],
+    "precedence": { "priority": 1, "strategy": "stack" },
+    "provenance": { "source": "Hello Pack" }
+  },
+  {
+    "id": "HELLO.Coin.Choice.1",
+    "scope": "player",
+    "trigger": { "event": "MainPhaseStarted" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "addChoice": {
+          "id": "gain_coin",
+          "label": "Gain 1 coin",
+          "actionRef": "HELLO.Action.GainCoin"
+        }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Hello Pack" }
+  },
+  {
+    "id": "HELLO.Action.GainCoin",
+    "scope": "player",
+    "trigger": { "event": "ChoiceSelected" },
+    "when": {
+      "all": [
+        { "eventParamEquals": { "param": "choiceId", "value": "gain_coin" } }
+      ]
+    },
+    "effect": [
+      {
+        "award": {
+          "target": { "eventParam": "player" },
+          "resource": "coin",
+          "amount": 1
+        }
+      }
+    ],
+    "precedence": { "priority": 20, "strategy": "stack" },
+    "provenance": { "source": "Hello Pack" }
+  }
+]

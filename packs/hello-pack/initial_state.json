@@ -1,0 +1,12 @@
+{
+  "totalRounds": 3,
+  "turnNumber": 1,
+  "turnPlayer": null,
+  "players": ["A", "B"],
+  "resources": {
+    "A": { "coin": 0 },
+    "B": { "coin": 0 }
+  },
+  "usage": {},
+  "statuses": {}
+}
