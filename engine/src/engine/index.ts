@@ -7,7 +7,7 @@ import type {
   TimelineNode,
   SubSequence,
 } from "../types/index.js";
-import type { ChoiceInstance } from "../types/index.js";
+import type { ChoiceInstance, ChoiceSnapshot, UndoCheck, UndoResult } from "../types/index.js";
 import { get, set, expireStatuses } from "../state/index.js";
 import { evaluate, executeEffect, type ResolvedEffect } from "../rules/index.js";
 import { SeededRNG } from "../rng/index.js";
@@ -74,6 +74,8 @@ export class SSCCEngine {
   private sequencer: Generator<GameEvent> | null = null;
   private lastTimelineEvent: GameEvent | null = null;
   private rng: SeededRNG;
+  private choiceHistory: ChoiceSnapshot[] = [];
+  private _rngUsedDuringChoice = false;
 
   constructor(pack: LoadedPack, options?: { seed?: number }) {
     this.pack = pack;
@@ -131,12 +133,19 @@ export class SSCCEngine {
     choiceInstanceId: string,
     args?: Record<string, unknown>,
   ): State {
+    // Snapshot before choice for undo support
+    const preChoiceState = this.state;
+    const preChoiceRng = this.rng.captureState();
+
     // Find the choice and verify costs are still affordable
     const activeChoices = getActiveChoices(this.state);
     const choice = activeChoices.find((c) => c.choiceInstanceId === choiceInstanceId);
     if (!choice) {
       throw new Error(`Choice instance not found or not active: ${choiceInstanceId}`);
     }
+
+    // Reset RNG tracking flag
+    this._rngUsedDuringChoice = false;
 
     // Deduct costs before selection
     if (choice.costs && Object.keys(choice.costs).length > 0) {
@@ -189,7 +198,88 @@ export class SSCCEngine {
     // Resolve the choice after its action completes
     this.state = resolveChoice(this.state, choiceInstanceId);
 
+    // Push snapshot to undo stack
+    this.choiceHistory.push({
+      choiceInstanceId,
+      state: preChoiceState,
+      rngState: preChoiceRng,
+      choiceId: choice.choiceId,
+      args,
+      usedRNG: this._rngUsedDuringChoice,
+    });
+
     return this.state;
+  }
+
+  /**
+   * Check if a choice can be undone and what confirmation is needed.
+   */
+  canUndoChoice(choiceInstanceId: string): UndoCheck | null {
+    const idx = this.choiceHistory.findIndex(
+      (s) => s.choiceInstanceId === choiceInstanceId,
+    );
+    if (idx === -1) return null;
+
+    const cascadeCount = this.choiceHistory.length - idx;
+    const anyUsedRNG = this.choiceHistory
+      .slice(idx)
+      .some((s) => s.usedRNG);
+
+    return {
+      requiresConfirm: anyUsedRNG,
+      reason: anyUsedRNG ? "RNG effects will be reverted" : undefined,
+      cascadeCount,
+    };
+  }
+
+  /**
+   * Undo a choice and all choices made after it.
+   */
+  undoChoice(
+    choiceInstanceId: string,
+    options?: { confirm?: boolean },
+  ): UndoResult {
+    const check = this.canUndoChoice(choiceInstanceId);
+    if (!check) {
+      throw new Error(`Cannot undo choice: ${choiceInstanceId} not in undo history`);
+    }
+
+    if (check.requiresConfirm && !options?.confirm) {
+      throw new Error(
+        "Undo involves RNG effects — pass { confirm: true } to proceed",
+      );
+    }
+
+    const idx = this.choiceHistory.findIndex(
+      (s) => s.choiceInstanceId === choiceInstanceId,
+    );
+    const snapshot = this.choiceHistory[idx];
+
+    // Collect undone choice IDs
+    const undoneChoices = this.choiceHistory
+      .slice(idx)
+      .map((s) => s.choiceInstanceId);
+
+    // Restore state and RNG
+    this.state = snapshot.state;
+    this.rng.restoreState(snapshot.rngState);
+
+    // Truncate history
+    this.choiceHistory = this.choiceHistory.slice(0, idx);
+
+    // Log the undo
+    this.logger.log("choice_undone", `Undo: reverted to before ${snapshot.choiceId}, undid ${undoneChoices.length} choice(s)`, {
+      data: {
+        undoneChoices,
+        targetChoiceId: snapshot.choiceId,
+      },
+    });
+
+    return {
+      success: true,
+      undoneChoices,
+      state: this.state,
+    };
   }
 
   /**
@@ -218,6 +308,11 @@ export class SSCCEngine {
     this.lastTimelineEvent = event;
 
     this.state = this.evaluateEvent(this.state, event);
+
+    // Clear undo stack when advancing past a resolved pause point
+    if (!hasUnresolvedChoices(this.state)) {
+      this.choiceHistory = [];
+    }
 
     return {
       state: this.state,
@@ -275,6 +370,9 @@ export class SSCCEngine {
       state = effectResult.state;
       allEmittedEvents.push(...effectResult.emittedEvents);
       allNewChoices.push(...effectResult.newChoices);
+      if (effectResult.usedRNG) {
+        this._rngUsedDuringChoice = true;
+      }
 
       for (const entry of effectResult.logEntries) {
         this.logger.log("note", entry.message, {
