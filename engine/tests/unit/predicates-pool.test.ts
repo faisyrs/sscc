@@ -59,9 +59,17 @@ describe("poolContainsPattern", () => {
     ).toBe(true);
   });
 
-  it("rejects triple with minValue when only double exists at that value", () => {
+  it("finds triple with minValue when higher values also qualify", () => {
+    // minValue 2 means >= 2; triple of 6s qualifies
     expect(
       check({ poolContainsPattern: { pool: "$.pool", filter: { spent: false }, pattern: { kind: "triple", minValue: 2 } } }),
+    ).toBe(true);
+  });
+
+  it("rejects triple when no group of 3+ exists at or above minValue", () => {
+    // Only a double of 2s and triple of 6s among unspent; minValue 7 excludes all
+    expect(
+      check({ poolContainsPattern: { pool: "$.pool", filter: { spent: false }, pattern: { kind: "triple", minValue: 7 } } }),
     ).toBe(false);
   });
 

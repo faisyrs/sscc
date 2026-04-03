@@ -129,11 +129,8 @@ export function evaluatePredicate(
     const { pool, filter, pattern } = (node as any).poolContainsPattern;
     const dice = readDiePool(state, pool);
     const filtered = dice.filter((d) => dieMatchesFilter(d, filter));
-    // If minValue is specified, restrict to dice with exactly that value
-    const eligible =
-      pattern.minValue !== undefined
-        ? filtered.filter((d) => (d.value as number) === pattern.minValue)
-        : filtered;
+    const minVal = pattern.minValue ?? 1;
+    const eligible = filtered.filter((d) => (d.value as number) >= minVal);
 
     // Group by value
     const groups = new Map<number, number>();
