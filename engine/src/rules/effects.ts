@@ -9,6 +9,7 @@ import type {
 import type { ChoiceInstance } from "../types/index.js";
 import { get, set, applyStatus, removeStatus } from "../state/index.js";
 import { resolveTargetEntityIds, resolvePlayer } from "./predicates.js";
+import { SeededRNG } from "../rng/index.js";
 
 export interface LogEntry {
   type: string;
@@ -40,6 +41,7 @@ export function executeEffect(
   event: GameEvent,
   sourceRuleId: string,
   glossary: Glossary,
+  rng?: SeededRNG,
 ): EffectResult {
   const result: EffectResult = {
     state,
@@ -243,6 +245,107 @@ export function executeEffect(
     return result;
   }
 
+  if ("roll" in effect) {
+    if (!rng) throw new Error("roll effect requires RNG — pass seed to engine constructor");
+    const { sides = 6, storePath, defaults } = effect.roll;
+    const count = resolveCount(effect.roll.count, state);
+    let s = set(state, `${storePath}.count`, count);
+    const values: number[] = [];
+    for (let i = 0; i < count; i++) {
+      const value = rng.nextInt(1, sides);
+      values.push(value);
+      const die: Record<string, unknown> = { value, rerolled: false, ...defaults };
+      s = set(s, `${storePath}.d${i}`, die);
+    }
+    result.state = s;
+    result.logEntries.push({
+      type: "note",
+      message: `roll: ${count}d${sides} -> [${values.join(", ")}] at ${storePath}`,
+      ruleId: sourceRuleId,
+      eventId: event.id,
+    });
+    return result;
+  }
+
+  if ("rerollDie" in effect) {
+    if (!rng) throw new Error("rerollDie effect requires RNG");
+    const { poolPath, sides = 6 } = effect.rerollDie;
+    const dieIndex = resolveCount(effect.rerollDie.dieIndex, state);
+    const diePath = `${poolPath}.d${dieIndex}`;
+    const die = get(state, diePath) as Record<string, unknown> | undefined;
+    if (!die) throw new Error(`No die at ${diePath}`);
+    if (die.rerolled === true) throw new Error(`Die ${dieIndex} already rerolled at ${poolPath}`);
+    const oldValue = die.value;
+    const newValue = rng.nextInt(1, sides);
+    result.state = set(state, diePath, { ...die, value: newValue, rerolled: true });
+    result.logEntries.push({
+      type: "note",
+      message: `reroll: die[${dieIndex}] ${oldValue} -> ${newValue} at ${poolPath}`,
+      ruleId: sourceRuleId,
+      eventId: event.id,
+    });
+    return result;
+  }
+
+  if ("rerollPool" in effect) {
+    if (!rng) throw new Error("rerollPool effect requires RNG");
+    const { poolPath, sides = 6 } = effect.rerollPool;
+    const count = get(state, `${poolPath}.count`) as number;
+    if (typeof count !== "number") throw new Error(`No pool count at ${poolPath}`);
+    let s = state;
+    const values: number[] = [];
+    for (let i = 0; i < count; i++) {
+      const oldDie = get(s, `${poolPath}.d${i}`) as Record<string, unknown> | undefined;
+      const value = rng.nextInt(1, sides);
+      values.push(value);
+      // Preserve keys from original die but reset value, rerolled, spent
+      const newDie: Record<string, unknown> = { ...oldDie, value, rerolled: false, spent: false };
+      s = set(s, `${poolPath}.d${i}`, newDie);
+    }
+    result.state = s;
+    result.logEntries.push({
+      type: "note",
+      message: `rerollPool: ${count}d${sides} -> [${values.join(", ")}] at ${poolPath}`,
+      ruleId: sourceRuleId,
+      eventId: event.id,
+    });
+    return result;
+  }
+
+  if ("spendDice" in effect) {
+    const { poolPath } = effect.spendDice;
+    const dieIndices = resolveDieIndices(effect.spendDice.dieIndices, event);
+    let s = state;
+    for (const idx of dieIndices) {
+      const diePath = `${poolPath}.d${idx}`;
+      const die = get(s, diePath) as Record<string, unknown> | undefined;
+      if (!die) throw new Error(`No die at ${diePath}`);
+      if (die.spent === true) throw new Error(`Die ${idx} already spent at ${poolPath}`);
+      s = set(s, diePath, { ...die, spent: true });
+    }
+    result.state = s;
+    result.logEntries.push({
+      type: "note",
+      message: `spendDice: [${dieIndices.join(", ")}] at ${poolPath}`,
+      ruleId: sourceRuleId,
+      eventId: event.id,
+    });
+    return result;
+  }
+
+  if ("setSeed" in effect) {
+    if (!rng) throw new Error("setSeed effect requires RNG");
+    const { seed } = effect.setSeed;
+    rng.reseed(seed);
+    result.logEntries.push({
+      type: "note",
+      message: `RNG reseeded to ${seed}`,
+      ruleId: sourceRuleId,
+      eventId: event.id,
+    });
+    return result;
+  }
+
   throw new Error(`Unknown effect verb: ${JSON.stringify(effect)}`);
 }
 
@@ -253,4 +356,27 @@ export function executeEffect(
 function resolveCurrentPlayer(event: GameEvent): string {
   if (typeof event.params.player === "string") return event.params.player;
   return "unknown";
+}
+
+/**
+ * Resolve a count field that may be a literal or a state path reference.
+ */
+function resolveCount(countOrRef: number | { path: string }, state: State): number {
+  if (typeof countOrRef === "number") return countOrRef;
+  const val = get(state, countOrRef.path);
+  if (typeof val !== "number") throw new Error(`Count path ${countOrRef.path} resolved to non-number: ${val}`);
+  return val;
+}
+
+/**
+ * Resolve dieIndices that may be a literal array or a fromChoice reference.
+ */
+function resolveDieIndices(
+  indicesOrRef: number[] | { fromChoice: string },
+  event: GameEvent,
+): number[] {
+  if (Array.isArray(indicesOrRef)) return indicesOrRef;
+  const val = event.params[indicesOrRef.fromChoice];
+  if (!Array.isArray(val)) throw new Error(`fromChoice ${indicesOrRef.fromChoice} did not resolve to array`);
+  return val as number[];
 }
