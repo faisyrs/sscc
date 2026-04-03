@@ -1,11 +1,13 @@
 export type LogEntryType =
   | "event_fired"
   | "rules_matched"
+  | "rule_skipped"
   | "effect_applied"
   | "choice_offered"
   | "choice_selected"
   | "choice_resolved"
   | "choice_expired"
+  | "choice_undone"
   | "status_expired"
   | "choice_suppressed"
   | "cost_deducted"
