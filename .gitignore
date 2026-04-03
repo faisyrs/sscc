@@ -1,3 +1,6 @@
+# Reference materials (large PDFs, etc.)
+ref/
+
 # Node
 node_modules/
 dist/
