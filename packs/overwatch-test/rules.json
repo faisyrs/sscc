@@ -1,0 +1,69 @@
+[
+  {
+    "id": "TEST.SetTurnPlayer",
+    "scope": "global",
+    "trigger": { "event": "TurnStarted" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "setValue": {
+          "path": "$.turnPlayer",
+          "valueFromEventParam": "player"
+        }
+      }
+    ],
+    "precedence": { "priority": 1, "strategy": "stack" },
+    "provenance": { "source": "Test" }
+  },
+  {
+    "id": "CORE.Stratagem.Overwatch.1",
+    "scope": "player",
+    "trigger": { "event": "ChargeDeclarationsEnded" },
+    "when": {
+      "all": [
+        {
+          "resourceAtLeast": {
+            "player": { "eventParam": "player" },
+            "resource": "cp",
+            "amount": 1
+          }
+        }
+      ]
+    },
+    "effect": [
+      {
+        "addChoice": {
+          "id": "overwatch",
+          "label": "Use Overwatch (1 CP)",
+          "actionRef": "CORE.Stratagem.Overwatch.Resolve.1",
+          "costs": { "cp": 1 }
+        }
+      }
+    ],
+    "precedence": { "priority": 60, "strategy": "stack" },
+    "provenance": { "source": "Core Rules" }
+  },
+  {
+    "id": "CORE.Stratagem.Overwatch.Resolve.1",
+    "scope": "player",
+    "trigger": { "event": "ChoiceSelected" },
+    "when": {
+      "all": [
+        { "eventParamEquals": { "param": "choiceId", "value": "overwatch" } }
+      ]
+    },
+    "effect": [
+      {
+        "consumeUsage": {
+          "scope": "player",
+          "key": "overwatch_used_this_phase"
+        }
+      },
+      {
+        "appendLogNote": { "message": "Overwatch fired" }
+      }
+    ],
+    "precedence": { "priority": 20, "strategy": "stack" },
+    "provenance": { "source": "Core Rules" }
+  }
+]

@@ -7,6 +7,8 @@ export type LogEntryType =
   | "choice_resolved"
   | "choice_expired"
   | "status_expired"
+  | "choice_suppressed"
+  | "cost_deducted"
   | "note"
   | "error";
 

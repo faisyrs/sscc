@@ -1,0 +1,8 @@
+{
+  "players": ["A"],
+  "turnPlayer": "A",
+  "resources": {
+    "A": { "cp": 1 }
+  },
+  "usage": {}
+}

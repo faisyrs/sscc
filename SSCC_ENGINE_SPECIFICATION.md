@@ -15,7 +15,7 @@ This document contains:
    - event-driven sequencing with structured timeline nodes
    - state-based eligibility with typed predicates
    - reason-based prohibitions and patches
-   - reaction windows with choice lifecycle
+   - choices with cost pre-computation and lifecycle
    - roll sub-sequences for attack resolution
    - temporary effects that expire on future events
    - rule provenance, priority, and conflict resolution
@@ -42,7 +42,6 @@ Examples:
 - unit statuses
 - resources such as command points
 - once-per-phase usage flags
-- reaction windows that are currently open
 
 State changes only through explicit engine effects.
 
@@ -161,7 +160,6 @@ Declares:
 ### 4.2 `timeline.yaml`
 Defines:
 - timeline node tree (see Section 5)
-- windows (reaction/interrupt windows)
 - reusable sub-sequences
 
 ### 4.3 `glossary.yaml`
@@ -332,9 +330,9 @@ The engine emits certain events automatically. These are **never declared in pac
 | Event | Parameters | When emitted |
 |---|---|---|
 | `ChoiceAdded` | choiceId, player, sourceRuleId | An `addChoice` effect executes |
-| `ChoiceSelected` | choiceId, player, sourceRuleId, actionRef, args, windowId, choiceInstanceId | A player or AI selects a choice |
+| `ChoiceSelected` | choiceId, player, sourceRuleId, actionRef, args, choiceInstanceId | A player or AI selects a choice |
 | `ChoiceResolved` | choiceId, choiceInstanceId | The action triggered by a choice completes |
-| `ChoiceExpired` | choiceId, choiceInstanceId | A choice expires (window closed, event reached) |
+| `ChoiceExpired` | choiceId, choiceInstanceId | A choice expires (event reached or explicitly removed) |
 
 Pack rules **may** trigger on system events. For example, a rule triggered by `ChoiceSelected` with `eventParamEquals: { param: "choiceId", value: "gain_coin" }` is how choice actions are implemented.
 
@@ -420,8 +418,6 @@ Every predicate has a name, a typed signature, evaluation semantics, and a load-
 | `pathAtLeast` | `(path: StatePath, value: number)` | True if numeric value at path >= value | Path resolves; target is numeric |
 | `pathMissing` | `(path: StatePath)` | True if path does not exist in current state | Parent path resolves in schema |
 | `resourceAtLeast` | `(player: PlayerRef, resource: string, amount: number)` | True if player's resource >= amount | Resource key exists in initial state schema |
-| `windowOpen` | `(id: WindowId)` | True if the named window is currently open | Window declared in timeline |
-| `windowClosed` | `(id: WindowId)` | True if the named window is currently closed | Window declared in timeline |
 | `eventParamEquals` | `(param: string, value: Literal)` | True if the named event parameter equals value | Param exists on at least one triggering event |
 | `counterAtLeast` | `(path: StatePath, value: number)` | True if numeric value at path >= value | Path resolves; target is numeric |
 | `counterEquals` | `(path: StatePath, value: number)` | True if numeric value at path == value | Path resolves; target is numeric |
@@ -565,7 +561,7 @@ Each effect verb has a name, parameter schema, target cardinality, conflict doma
 
 Writes an array of integers to `storePath`. That is all. No comparison, no threshold — downstream rules on later events read the array and classify results.
 
-### 9.4 Event and Window Control
+### 9.4 Event Control
 
 #### `emit`
 
@@ -576,26 +572,6 @@ Writes an array of integers to `storePath`. That is all. No comparison, no thres
 | Conflict domain | none |
 | Stackability | stackable |
 | Load-time checks | eventId exists in timeline or is a system event |
-
-#### `openWindow`
-
-| Field | Value |
-|---|---|
-| Parameters | `id: WindowId` |
-| Target cardinality | n/a |
-| Conflict domain | `(windowId)` |
-| Stackability | singleton |
-| Load-time checks | Window declared in timeline |
-
-#### `closeWindow`
-
-| Field | Value |
-|---|---|
-| Parameters | `id: WindowId` |
-| Target cardinality | n/a |
-| Conflict domain | `(windowId)` |
-| Stackability | singleton |
-| Load-time checks | Window declared in timeline |
 
 ### 9.5 Resources and Scoring
 
@@ -695,7 +671,6 @@ Every choice instance carries:
 | `choiceId` | From the `addChoice` effect |
 | `createdAtEvent` | Event during which this choice was offered |
 | `expiresAtEvent` | Optional: event that causes expiry |
-| `expiresOnWindowClose` | Optional: window whose closure causes expiry |
 | `sourceRuleId` | Rule that created this choice |
 | `player` | Player to whom the choice is offered |
 
@@ -704,7 +679,6 @@ Every choice instance carries:
 A choice remains active until one of:
 - It is **selected** and its action resolves
 - It is **explicitly removed** by a rule effect
-- Its **window closes** (if `expiresOnWindowClose` is set)
 - Its **expiry event** fires (if `expiresAtEvent` is set)
 
 When a choice expires, the engine emits a `ChoiceExpired` system event.
@@ -954,7 +928,7 @@ A rulelet should follow this schema:
 | Field | Description |
 |---|---|
 | `id` | Stable rule identifier. Convention: `PACK.Category.Name.Version` |
-| `scope` | One of: `global`, `player`, `entity`, `unit`, `attack`, `window` |
+| `scope` | One of: `global`, `player`, `entity`, `unit`, `attack` |
 | `trigger` | Event that activates this rule |
 | `when` | Additional predicates (Section 8) |
 | `effect` | Array of effect verbs (Section 9) |
@@ -1008,7 +982,6 @@ Later packs may:
 - Reads timeline node tree
 - Walks nodes recursively (sequence, repeat, forEach, subSequence)
 - Emits events in order
-- Opens/closes windows
 - Emits system events (Section 6)
 
 ### 16.3 Rule Executor
@@ -1734,47 +1707,28 @@ selectors:
 ]
 ```
 
-### 5.4 Reaction window example
+### 5.4 Overwatch example (state-driven)
 
 ```json
 [
-  {
-    "id": "CORE.Window.Overwatch.Open.1",
-    "scope": "window",
-    "trigger": { "event": "ChargeDeclarationsEnded" },
-    "when": { "all": [] },
-    "effect": [
-      { "openWindow": { "id": "OverwatchWindow" } }
-    ],
-    "precedence": { "priority": 10, "strategy": "stack" },
-    "provenance": { "source": "Core Rules" }
-  },
-  {
-    "id": "CORE.Window.Overwatch.Close.1",
-    "scope": "window",
-    "trigger": { "event": "FightPhaseStarted" },
-    "when": { "all": [] },
-    "effect": [
-      { "closeWindow": { "id": "OverwatchWindow" } }
-    ],
-    "precedence": { "priority": 100, "strategy": "stack" },
-    "provenance": { "source": "Core Rules" }
-  },
   {
     "id": "CORE.Stratagem.Overwatch.1",
     "scope": "player",
     "trigger": { "event": "ChargeDeclarationsEnded" },
     "when": {
       "all": [
-        { "windowOpen": { "id": "OverwatchWindow" } },
-        { "resourceAtLeast": { "player": { "eventParam": "player" }, "resource": "cp", "amount": 1 } }
+        { "resourceAtLeast": {
+            "player": { "eventParam": "player" },
+            "resource": "cp",
+            "amount": 1
+        }}
       ]
     },
     "effect": [
       {
         "addChoice": {
           "id": "overwatch",
-          "label": "Use reaction fire",
+          "label": "Use Overwatch (1 CP)",
           "actionRef": "CORE.Stratagem.Overwatch.Resolve.1",
           "costs": { "cp": 1 }
         }
@@ -1782,9 +1736,34 @@ selectors:
     ],
     "precedence": { "priority": 60, "strategy": "stack" },
     "provenance": { "source": "Core Rules" }
+  },
+  {
+    "id": "CORE.Stratagem.Overwatch.Resolve.1",
+    "scope": "player",
+    "trigger": { "event": "ChoiceSelected" },
+    "when": {
+      "all": [
+        { "eventParamEquals": { "param": "choiceId", "value": "overwatch" } }
+      ]
+    },
+    "effect": [
+      {
+        "consumeUsage": {
+          "scope": "player",
+          "key": "overwatch_used_this_phase"
+        }
+      },
+      {
+        "appendLogNote": { "message": "Overwatch fired" }
+      }
+    ],
+    "precedence": { "priority": 20, "strategy": "stack" },
+    "provenance": { "source": "Core Rules" }
   }
 ]
 ```
+
+No window open/close rules needed. The `resourceAtLeast` predicate prevents the choice from being offered when CP is insufficient. The engine's cost pre-computation provides a second layer of guarantee — choices with costs that the player cannot afford are suppressed at offer time. Usage tracking (`consumeUsage`) prevents repeat use within a phase.
 
 ### 5.5 Fight attack micro-pipeline
 
@@ -2131,12 +2110,12 @@ Validate with Hello Pack.
 
 ## Milestone 2
 
-Add windows and costs:
-- Window open/close lifecycle
-- Choice costs and resource spending
-- Overwatch-style reaction example
+Remove windows, add choice costs:
+- Choice cost pre-computation (suppress unaffordable choices at offer time)
+- Auto-deduct costs on choice selection
+- Overwatch example using pure state + events
 
-Validate with Overwatch-style example from Part III Section 5.4.
+Validate with overwatch example using state-driven rules.
 
 ## Milestone 3
 

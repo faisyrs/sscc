@@ -17,4 +17,5 @@ export interface ChoiceInstance {
   state: ChoiceState;
   selectionFrom?: TargetRef;
   selectedArgs?: Record<string, unknown>;
+  costs?: Record<string, number>;
 }

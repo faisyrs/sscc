@@ -1,0 +1,25 @@
+timeline:
+  - event: StartOfGame
+
+  - forEach:
+      over: { kind: "player", from: "$.players" }
+      bindParam: player
+      body:
+        - event: TurnStarted
+          params: [player]
+
+        - event: ChargePhaseStarted
+          params: [player]
+
+        - event: ChargeDeclarationsEnded
+          params: [player]
+
+        - event: ChargePhaseEnded
+          params: [player]
+
+        - event: TurnEnded
+          params: [player]
+
+  - event: EndOfGame
+
+subSequences: {}

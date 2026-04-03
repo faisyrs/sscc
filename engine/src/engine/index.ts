@@ -8,7 +8,7 @@ import type {
   SubSequence,
 } from "../types/index.js";
 import type { ChoiceInstance } from "../types/index.js";
-import { expireStatuses } from "../state/index.js";
+import { get, set, expireStatuses } from "../state/index.js";
 import { evaluate, executeEffect, type ResolvedEffect } from "../rules/index.js";
 import {
   addChoice,
@@ -20,6 +20,41 @@ import {
 } from "../choices/index.js";
 import { walkTimeline } from "../sequencer/index.js";
 import { Logger, type LogEntry } from "../logger/index.js";
+
+/**
+ * Check if a player can afford the costs of a choice.
+ * Looks up $.resources.<playerId>.<resourceKey> for each cost entry.
+ */
+function canAffordCosts(
+  state: State,
+  playerId: string,
+  costs: Record<string, number>,
+): boolean {
+  for (const [resource, amount] of Object.entries(costs)) {
+    const current = get(state, `$.resources.${playerId}.${resource}`);
+    if (typeof current !== "number" || current < amount) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Deduct costs from a player's resources. Returns new state.
+ * Caller must verify affordability first.
+ */
+function deductCosts(
+  state: State,
+  playerId: string,
+  costs: Record<string, number>,
+): State {
+  let s = state;
+  for (const [resource, amount] of Object.entries(costs)) {
+    const current = get(s, `$.resources.${playerId}.${resource}`) as number;
+    s = set(s, `$.resources.${playerId}.${resource}`, current - amount);
+  }
+  return s;
+}
 
 export interface AdvanceResult {
   state: State;
@@ -90,6 +125,31 @@ export class SSCCEngine {
     choiceInstanceId: string,
     args?: Record<string, unknown>,
   ): State {
+    // Find the choice and verify costs are still affordable
+    const activeChoices = getActiveChoices(this.state);
+    const choice = activeChoices.find((c) => c.choiceInstanceId === choiceInstanceId);
+    if (!choice) {
+      throw new Error(`Choice instance not found or not active: ${choiceInstanceId}`);
+    }
+
+    // Deduct costs before selection
+    if (choice.costs && Object.keys(choice.costs).length > 0) {
+      if (!canAffordCosts(this.state, choice.player, choice.costs)) {
+        throw new Error(
+          `Player ${choice.player} cannot afford choice ${choice.choiceId}: ` +
+          `costs ${JSON.stringify(choice.costs)}`
+        );
+      }
+      this.state = deductCosts(this.state, choice.player, choice.costs);
+      this.logger.log("cost_deducted", `Costs deducted for ${choice.choiceId}`, {
+        data: {
+          choiceId: choice.choiceId,
+          player: choice.player,
+          costs: choice.costs,
+        },
+      });
+    }
+
     const { state: newState, event } = selectChoice(
       this.state,
       choiceInstanceId,
@@ -202,8 +262,21 @@ export class SSCCEngine {
       }
     }
 
-    // Step 5: Add new choices to state
+    // Step 5: Add new choices to state (filter unaffordable)
     for (const choice of allNewChoices) {
+      if (choice.costs && Object.keys(choice.costs).length > 0) {
+        if (!canAffordCosts(state, choice.player, choice.costs)) {
+          this.logger.log("choice_suppressed", `Choice suppressed (unaffordable): ${choice.choiceId}`, {
+            eventId: event.id,
+            data: {
+              choiceId: choice.choiceId,
+              player: choice.player,
+              costs: choice.costs,
+            },
+          });
+          continue;
+        }
+      }
       state = addChoice(state, choice);
       this.logger.log("choice_offered", `Choice offered: ${choice.choiceId}`, {
         eventId: event.id,

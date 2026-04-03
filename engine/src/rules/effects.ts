@@ -149,6 +149,7 @@ export function executeEffect(
       createdAtEvent: event.id,
       state: "offered",
       selectionFrom,
+      costs: costs as Record<string, number> | undefined,
     };
     result.newChoices.push(choice);
     return result;

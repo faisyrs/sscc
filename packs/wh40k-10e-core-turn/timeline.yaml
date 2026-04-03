@@ -41,8 +41,6 @@ timeline:
 
   - event: EndOfGame
 
-windows: []
-
 subSequences:
   commandPhase:
     params: [player]
