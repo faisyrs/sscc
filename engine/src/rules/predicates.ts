@@ -8,6 +8,7 @@ import type {
   SelectorDef,
 } from "../types/index.js";
 import { get } from "../state/index.js";
+import { readDiePool, dieMatchesFilter } from "./pool-helpers.js";
 
 /**
  * Evaluate a predicate tree against current state and event.
@@ -122,6 +123,37 @@ export function evaluatePredicate(
     const { id } = (node as any).selector;
     const ids = evaluateSelector(id, state, event, glossary);
     return ids.length > 0;
+  }
+
+  if ("poolContainsPattern" in node) {
+    const { pool, filter, pattern } = (node as any).poolContainsPattern;
+    const dice = readDiePool(state, pool);
+    const filtered = dice.filter((d) => dieMatchesFilter(d, filter));
+    // If minValue is specified, restrict to dice with exactly that value
+    const eligible =
+      pattern.minValue !== undefined
+        ? filtered.filter((d) => (d.value as number) === pattern.minValue)
+        : filtered;
+
+    // Group by value
+    const groups = new Map<number, number>();
+    for (const d of eligible) {
+      const v = d.value as number;
+      groups.set(v, (groups.get(v) ?? 0) + 1);
+    }
+
+    const needed = pattern.kind === "double" ? 2 : 3;
+    for (const count of groups.values()) {
+      if (count >= needed) return true;
+    }
+    return false;
+  }
+
+  if ("diePoolCount" in node) {
+    const { pool, filter, min } = (node as any).diePoolCount;
+    const dice = readDiePool(state, pool);
+    const count = dice.filter((d) => dieMatchesFilter(d, filter)).length;
+    return count >= min;
   }
 
   throw new Error(`Unknown predicate type: ${JSON.stringify(node)}`);
