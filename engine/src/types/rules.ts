@@ -58,7 +58,8 @@ export type Effect =
   | { rerollDie: { poolPath: string; dieIndex: number | { path: string }; sides?: number } }
   | { rerollPool: { poolPath: string; sides?: number } }
   | { spendDice: { poolPath: string; dieIndices: number[] | { fromChoice: string } } }
-  | { setSeed: { seed: number } };
+  | { setSeed: { seed: number } }
+  | { computePoolSum: { poolPath: string; targetPath: string; skipSpent?: boolean } };
 
 /** The single key that identifies which verb an effect uses. */
 export type EffectVerb = Effect extends infer E
