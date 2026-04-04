@@ -6,6 +6,7 @@ import { parseTimeline } from "./timeline.js";
 import { parseGlossary } from "./glossary.js";
 import { parseRules, indexRulesByEvent } from "./rules.js";
 import { parseInitialState } from "./state.js";
+import { parseDatasheets, mergeDatasheets } from "./datasheets.js";
 import { validatePack } from "./validation.js";
 import { collectEventIds } from "../sequencer/index.js";
 import { SYSTEM_EVENTS } from "../types/index.js";
@@ -59,6 +60,14 @@ export async function loadPack(packPath: string): Promise<LoadResult> {
     errors.push({ code: "FILE_READ_ERROR", message: `Cannot read initial_state.json: ${e}` });
   }
 
+  let datasheetsData: unknown = undefined;
+  try {
+    const datasheetsRaw = await readFile(join(packPath, "datasheets.yaml"), "utf-8");
+    datasheetsData = yaml.load(datasheetsRaw);
+  } catch {
+    // Optional file -- ignore if not found
+  }
+
   if (errors.length > 0) {
     return { ok: false, errors };
   }
@@ -69,6 +78,12 @@ export async function loadPack(packPath: string): Promise<LoadResult> {
   const glossary = parseGlossary(glossaryData);
   const rules = parseRules(rulesData);
   const initialState = parseInitialState(stateData);
+
+  const datasheets = parseDatasheets(datasheetsData);
+  const { state: mergedState, errors: dsErrors } = mergeDatasheets(initialState, datasheets);
+  if (dsErrors.length > 0) {
+    return { ok: false, errors: dsErrors };
+  }
 
   // Validate cross-references
   const validationErrors = validatePack(rules, glossary, timeline, subSequences);
@@ -102,7 +117,7 @@ export async function loadPack(packPath: string): Promise<LoadResult> {
     glossary,
     rules,
     rulesByEvent,
-    initialState,
+    initialState: mergedState,
     allEventIds,
   };
 
