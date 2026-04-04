@@ -1,0 +1,97 @@
+keywords:
+  - INFANTRY
+  - VEHICLE
+  - CHARACTER
+  - MONSTER
+  - IMPERIUM
+  - ADEPTUS ASTARTES
+  - ORK
+
+statuses:
+  can_move:
+    description: "Unit is eligible to activate in the Movement phase"
+  can_shoot:
+    description: "Unit is eligible to activate in the Shooting phase"
+  can_charge:
+    description: "Unit is eligible to activate in the Charge phase"
+  can_fight:
+    description: "Unit is eligible to activate in the Fight phase"
+  advanced_move:
+    description: "Unit advanced this turn"
+  fell_back:
+    description: "Unit fell back this turn"
+  remained_stationary:
+    description: "Unit remained stationary this turn"
+  charged:
+    description: "Unit successfully charged this turn"
+  battleshocked:
+    description: "Unit failed its Battleshock test"
+  below_half_strength:
+    description: "Unit has lost more than half its models"
+  in_engagement_range:
+    description: "Unit is within engagement range of an enemy unit"
+
+reason_keys:
+  shoot:
+    - advanced_move
+    - fell_back
+  charge:
+    - advanced_move
+    - fell_back
+
+selectors:
+  active_player_units:
+    kind: unit
+    where:
+      pathEquals:
+        path: "$.turnPlayer"
+        valueFromEventParam: player
+
+  units_can_move:
+    kind: unit
+    where:
+      hasStatus: can_move
+
+  units_can_shoot:
+    kind: unit
+    where:
+      hasStatus: can_shoot
+
+  units_can_charge:
+    kind: unit
+    where:
+      hasStatus: can_charge
+
+  units_can_fight:
+    kind: unit
+    where:
+      hasStatus: can_fight
+
+  units_advanced:
+    kind: unit
+    where:
+      hasStatus: advanced_move
+
+  units_fell_back:
+    kind: unit
+    where:
+      hasStatus: fell_back
+
+  units_battleshocked:
+    kind: unit
+    where:
+      hasStatus: battleshocked
+
+  units_below_half_strength:
+    kind: unit
+    where:
+      hasStatus: below_half_strength
+
+  active_player_below_half:
+    kind: unit
+    where:
+      all:
+        - hasStatus: below_half_strength
+        - pathEquals:
+            path: "$.turnPlayer"
+            valueFromEventParam: player
