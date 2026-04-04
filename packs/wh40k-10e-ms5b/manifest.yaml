@@ -1,0 +1,5 @@
+id: wh40k-10e-ms5b
+name: "Warhammer 40,000 10th Edition - MS 5B Command & Movement"
+version: 0.1.0
+engine_version: "^0.2.0"
+dependencies: []

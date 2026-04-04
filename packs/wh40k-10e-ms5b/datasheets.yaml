@@ -1,0 +1,120 @@
+datasheets:
+  intercessor_squad:
+    name: "Intercessor Squad"
+    keywords: [INFANTRY, IMPERIUM, ADEPTUS ASTARTES]
+    stats:
+      M: 6
+      T: 4
+      Sv: 3
+      W: 2
+      Ld: 6
+      OC: 2
+    profiles:
+      ranged:
+        id: wp_bolt_rifle
+        name: "Bolt Rifle"
+        A: 2
+        BS: 3
+        S: 4
+        AP: -1
+        D: 1
+        keywords: [RAPID FIRE 1]
+      melee:
+        id: wp_close_combat
+        name: "Close Combat Weapon"
+        A: 3
+        WS: 3
+        S: 4
+        AP: 0
+        D: 1
+        keywords: []
+
+  hellblaster_squad:
+    name: "Hellblaster Squad"
+    keywords: [INFANTRY, IMPERIUM, ADEPTUS ASTARTES]
+    stats:
+      M: 6
+      T: 4
+      Sv: 3
+      W: 2
+      Ld: 6
+      OC: 2
+    profiles:
+      ranged:
+        id: wp_plasma_incinerator
+        name: "Plasma Incinerator"
+        A: 2
+        BS: 3
+        S: 8
+        AP: -3
+        D: 2
+        keywords: [HEAVY]
+      melee:
+        id: wp_close_combat
+        name: "Close Combat Weapon"
+        A: 3
+        WS: 3
+        S: 4
+        AP: 0
+        D: 1
+        keywords: []
+
+  ork_boyz:
+    name: "Ork Boyz"
+    keywords: [INFANTRY, ORK]
+    stats:
+      M: 6
+      T: 5
+      Sv: 5
+      W: 1
+      Ld: 7
+      OC: 2
+    profiles:
+      ranged:
+        id: wp_slugga
+        name: "Slugga"
+        A: 1
+        BS: 5
+        S: 4
+        AP: 0
+        D: 1
+        keywords: [PISTOL]
+      melee:
+        id: wp_choppa
+        name: "Choppa"
+        A: 3
+        WS: 3
+        S: 4
+        AP: -1
+        D: 1
+        keywords: []
+
+  lootas:
+    name: "Lootas"
+    keywords: [INFANTRY, ORK]
+    stats:
+      M: 6
+      T: 5
+      Sv: 5
+      W: 1
+      Ld: 7
+      OC: 1
+    profiles:
+      ranged:
+        id: wp_deffgun
+        name: "Deffgun"
+        A: 3
+        BS: 5
+        S: 7
+        AP: -1
+        D: 2
+        keywords: [HEAVY]
+      melee:
+        id: wp_close_combat
+        name: "Close Combat Weapon"
+        A: 2
+        WS: 4
+        S: 4
+        AP: 0
+        D: 1
+        keywords: []
