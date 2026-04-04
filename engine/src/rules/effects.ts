@@ -354,6 +354,27 @@ export function executeEffect(
     return result;
   }
 
+  if ("computePoolSum" in effect) {
+    const { poolPath, targetPath, skipSpent } = effect.computePoolSum;
+    const count = get(state, `${poolPath}.count`);
+    if (typeof count !== "number") throw new Error(`No pool count at ${poolPath}`);
+    let sum = 0;
+    for (let i = 0; i < count; i++) {
+      const die = get(state, `${poolPath}.d${i}`) as Record<string, unknown> | undefined;
+      if (!die) continue;
+      if (skipSpent && die.spent === true) continue;
+      sum += die.value as number;
+    }
+    result.state = set(state, targetPath, sum);
+    result.logEntries.push({
+      type: "note",
+      message: `computePoolSum: ${poolPath} -> ${sum} at ${targetPath}`,
+      ruleId: sourceRuleId,
+      eventId: event.id,
+    });
+    return result;
+  }
+
   throw new Error(`Unknown effect verb: ${JSON.stringify(effect)}`);
 }
 
