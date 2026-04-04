@@ -30,6 +30,8 @@ statuses:
     description: "Unit has lost more than half its models"
   in_engagement_range:
     description: "Unit is within engagement range of an enemy unit"
+  needs_battleshock_test:
+    description: "Unit must take a battleshock test this phase"
 
 reason_keys:
   shoot:
@@ -93,5 +95,14 @@ selectors:
       all:
         - hasStatus: below_half_strength
         - pathEquals:
-            path: "$.turnPlayer"
+            path: "$entity.owner"
+            valueFromEventParam: player
+
+  active_player_needs_battleshock:
+    kind: unit
+    where:
+      all:
+        - hasStatus: needs_battleshock_test
+        - pathEquals:
+            path: "$entity.owner"
             valueFromEventParam: player
