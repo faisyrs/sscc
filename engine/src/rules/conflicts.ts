@@ -80,7 +80,6 @@ export function getConflictDomain(effect: Effect): string | null {
   if ("setSeed" in effect) {
     return "setSeed";
   }
-
   return null;
 }
 

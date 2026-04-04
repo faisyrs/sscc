@@ -26,6 +26,7 @@ export type PredicateNode =
   | { pathEquals: { path: string; value?: unknown; valueFromEventParam?: string } }
   | { pathIn: { path: string; value: unknown } }
   | { pathAtLeast: { path: string; value: number } }
+  | { pathAtLeastPath: { path: string; valuePath: string } }
   | { pathMissing: { path: string } }
   | { resourceAtLeast: { player: PlayerRef; resource: string; amount: number } }
   | { eventParamEquals: { param: string; value: unknown } }
@@ -41,7 +42,7 @@ export type PredicateNode =
 export type Effect =
   | { applyStatus: { target: TargetRef; key: string; expiresOn?: string } }
   | { removeStatus: { target: TargetRef; key: string } }
-  | { setValue: { path: string; value?: unknown; valueFromPath?: string; valueFromEventParam?: string } }
+  | { setValue: { path: string; value?: unknown; valueFromPath?: string; valueFromEventParam?: string; valueFromDynamicPath?: string } }
   | { modifyCounter: { path: string; delta?: number; deltaFromPath?: string } }
   | { addProhibition: { target: TargetRef; action: string; reason: string } }
   | { removeProhibition: { target: TargetRef; action: string; reason: string } }

@@ -63,6 +63,13 @@ export function evaluatePredicate(
     return typeof actual === "number" && actual >= value;
   }
 
+  if ("pathAtLeastPath" in node) {
+    const { path, valuePath } = (node as any).pathAtLeastPath;
+    const actual = get(state, path);
+    const threshold = get(state, valuePath);
+    return typeof actual === "number" && typeof threshold === "number" && actual >= threshold;
+  }
+
   if ("pathMissing" in node) {
     const { path } = (node as any).pathMissing;
     return get(state, path) === undefined;
@@ -93,7 +100,9 @@ export function evaluatePredicate(
   }
 
   if ("hasStatus" in node) {
-    const { target, key } = (node as any).hasStatus;
+    const raw = (node as any).hasStatus;
+    const key = typeof raw === "string" ? raw : raw.key;
+    const target = typeof raw === "string" ? undefined : raw.target;
     const entityIds = resolveTargetEntityIds(target, state, event, glossary);
     return entityIds.length > 0 && entityIds.every((id) => {
       const statuses = get(state, `$.units.${id}.statuses`) as Record<string, unknown> | undefined;
@@ -102,7 +111,9 @@ export function evaluatePredicate(
   }
 
   if ("missingStatus" in node) {
-    const { target, key } = (node as any).missingStatus;
+    const raw = (node as any).missingStatus;
+    const key = typeof raw === "string" ? raw : raw.key;
+    const target = typeof raw === "string" ? undefined : raw.target;
     const entityIds = resolveTargetEntityIds(target, state, event, glossary);
     return entityIds.length > 0 && entityIds.every((id) => {
       const statuses = get(state, `$.units.${id}.statuses`) as Record<string, unknown> | undefined;
@@ -268,25 +279,59 @@ function evaluatePredicateForEntity(
   event: GameEvent,
   glossary: Glossary,
 ): boolean {
+  // Handle composition predicates by recursing with entity context
+  if ("all" in node) {
+    return (node as { all: PredicateNode[] }).all.every((child) =>
+      evaluatePredicateForEntity(child, entityId, state, event, glossary),
+    );
+  }
+  if ("any" in node) {
+    return (node as { any: PredicateNode[] }).any.some((child) =>
+      evaluatePredicateForEntity(child, entityId, state, event, glossary),
+    );
+  }
+  if ("not" in node) {
+    return !evaluatePredicateForEntity(
+      (node as { not: PredicateNode }).not,
+      entityId,
+      state,
+      event,
+      glossary,
+    );
+  }
+
   // For hasStatus/missingStatus in a where clause, the implicit target is the current entity
+  // Supports both short form (hasStatus: "key") and long form (hasStatus: { key: "key", target: ... })
   if ("hasStatus" in node) {
-    const { key } = (node as any).hasStatus;
-    const target = (node as any).hasStatus.target;
+    const raw = (node as any).hasStatus;
+    const key = typeof raw === "string" ? raw : raw.key;
+    const target = typeof raw === "string" ? undefined : raw.target;
     if (!target) {
       const statuses = get(state, `$.units.${entityId}.statuses`) as Record<string, unknown> | undefined;
       return statuses !== undefined && key in statuses;
     }
   }
   if ("missingStatus" in node) {
-    const { key } = (node as any).missingStatus;
-    const target = (node as any).missingStatus.target;
+    const raw = (node as any).missingStatus;
+    const key = typeof raw === "string" ? raw : raw.key;
+    const target = typeof raw === "string" ? undefined : raw.target;
     if (!target) {
       const statuses = get(state, `$.units.${entityId}.statuses`) as Record<string, unknown> | undefined;
       return statuses === undefined || !(key in statuses);
     }
   }
-  // For pathEquals in a where clause, evaluate normally
+  // For pathEquals in a where clause, support $entity. prefix for entity-relative paths
   if ("pathEquals" in node) {
+    const { path, value, valueFromEventParam } = (node as any).pathEquals;
+    if (typeof path === "string" && path.startsWith("$entity.")) {
+      const relPath = path.slice("$entity.".length);
+      const actual = get(state, `$.units.${entityId}.${relPath}`);
+      const expected =
+        valueFromEventParam !== undefined
+          ? event.params[valueFromEventParam]
+          : value;
+      return actual === expected;
+    }
     return evaluatePredicate(node, state, event, glossary);
   }
 

@@ -206,3 +206,45 @@ describe("selector predicate", () => {
     expect(evaluate({ selector: { id: "empty_selector" } })).toBe(false);
   });
 });
+
+describe("pathAtLeastPath", () => {
+  it("returns true when path value >= valuePath value", () => {
+    const state = { ...baseState, battleshock: { sum: 8, targetLd: 6 } };
+    expect(evaluate(
+      { pathAtLeastPath: { path: "$.battleshock.sum", valuePath: "$.battleshock.targetLd" } },
+      state,
+    )).toBe(true);
+  });
+
+  it("returns true when values are equal", () => {
+    const state = { ...baseState, battleshock: { sum: 6, targetLd: 6 } };
+    expect(evaluate(
+      { pathAtLeastPath: { path: "$.battleshock.sum", valuePath: "$.battleshock.targetLd" } },
+      state,
+    )).toBe(true);
+  });
+
+  it("returns false when path value < valuePath value", () => {
+    const state = { ...baseState, battleshock: { sum: 5, targetLd: 6 } };
+    expect(evaluate(
+      { pathAtLeastPath: { path: "$.battleshock.sum", valuePath: "$.battleshock.targetLd" } },
+      state,
+    )).toBe(false);
+  });
+
+  it("returns false when path value is not a number", () => {
+    const state = { ...baseState, battleshock: { sum: null, targetLd: 6 } };
+    expect(evaluate(
+      { pathAtLeastPath: { path: "$.battleshock.sum", valuePath: "$.battleshock.targetLd" } },
+      state,
+    )).toBe(false);
+  });
+
+  it("returns false when valuePath is not a number", () => {
+    const state = { ...baseState, battleshock: { sum: 8, targetLd: null } };
+    expect(evaluate(
+      { pathAtLeastPath: { path: "$.battleshock.sum", valuePath: "$.battleshock.targetLd" } },
+      state,
+    )).toBe(false);
+  });
+});

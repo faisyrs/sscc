@@ -75,10 +75,17 @@ export function executeEffect(
   }
 
   if ("setValue" in effect) {
-    const { path, value, valueFromPath, valueFromEventParam } = effect.setValue;
+    const { path, value, valueFromPath, valueFromEventParam, valueFromDynamicPath } = effect.setValue;
     let resolved: unknown;
     if (valueFromEventParam !== undefined) {
       resolved = event.params[valueFromEventParam];
+    } else if (valueFromDynamicPath !== undefined) {
+      // Resolve {$.path.to.value} interpolations in the path template
+      const resolvedPath = valueFromDynamicPath.replace(
+        /\{([^}]+)\}/g,
+        (_, ref) => String(get(state, ref) ?? ""),
+      );
+      resolved = get(state, resolvedPath);
     } else if (valueFromPath !== undefined) {
       resolved = get(state, valueFromPath);
     } else {
