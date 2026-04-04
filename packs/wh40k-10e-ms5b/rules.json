@@ -712,5 +712,310 @@
     ],
     "precedence": { "priority": 100, "strategy": "stack" },
     "provenance": { "source": "Core Rules", "note": "Safety cleanup for can_fight" }
+  },
+
+  {
+    "id": "CORE.Command.ClearBattleshock.1",
+    "scope": "global",
+    "trigger": { "event": "CommandPhaseStarted" },
+    "when": {
+      "all": [
+        { "selector": { "id": "units_battleshocked" } }
+      ]
+    },
+    "effect": [
+      {
+        "removeStatus": {
+          "target": { "selector": "units_battleshocked" },
+          "key": "battleshocked"
+        }
+      }
+    ],
+    "precedence": { "priority": 5, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Clear battleshocked status from all units at start of command phase" }
+  },
+  {
+    "id": "CORE.Command.ResetPhaseUsage.1",
+    "scope": "global",
+    "trigger": { "event": "CommandPhaseStarted" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "resetUsage": { "scope": "player", "keys": ["command_reroll_phase"] }
+      }
+    ],
+    "precedence": { "priority": 6, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Reset per-phase usage flags at start of command phase" }
+  },
+  {
+    "id": "CORE.Command.Battleshock.ResetScratch.1",
+    "scope": "global",
+    "trigger": { "event": "CommandPhaseStarted" },
+    "when": { "all": [] },
+    "effect": [
+      { "setValue": { "path": "$.battleshock.currentUnitId", "value": null } },
+      { "setValue": { "path": "$.battleshock.rollResult", "value": null } },
+      { "setValue": { "path": "$.battleshock.sum", "value": null } },
+      { "setValue": { "path": "$.battleshock.autoPass", "value": false } },
+      { "setValue": { "path": "$.battleshock.targetLd", "value": null } }
+    ],
+    "precedence": { "priority": 7, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Reset battleshock scratch state" }
+  },
+  {
+    "id": "CORE.Command.CP.Award.1",
+    "scope": "global",
+    "trigger": { "event": "CommandPhaseStarted" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "award": {
+          "target": { "eventParam": "player" },
+          "resource": "cp",
+          "amount": 1
+        }
+      },
+      {
+        "appendLogNote": { "message": "Command Points awarded: +1 CP" }
+      }
+    ],
+    "precedence": { "priority": 8, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Award 1 CP to active player at start of command phase" }
+  },
+  {
+    "id": "CORE.Command.Battleshock.GrantNeedTest.1",
+    "scope": "global",
+    "trigger": { "event": "CommandPhaseStarted" },
+    "when": {
+      "all": [
+        { "selector": { "id": "active_player_below_half" } }
+      ]
+    },
+    "effect": [
+      {
+        "applyStatus": {
+          "target": { "selector": "active_player_below_half" },
+          "key": "needs_battleshock_test"
+        }
+      }
+    ],
+    "precedence": { "priority": 9, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Grant needs_battleshock_test to active player below-half-strength units" }
+  },
+  {
+    "id": "CORE.Command.Battleshock.EmitCheck.1",
+    "scope": "global",
+    "trigger": { "event": "CommandPhaseStarted" },
+    "when": {
+      "all": [
+        { "selector": { "id": "active_player_below_half" } }
+      ]
+    },
+    "effect": [
+      {
+        "emit": { "eventId": "BattleshockPhaseCheck", "params": { "player": { "eventParam": "player" } } }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Emit BattleshockPhaseCheck to start the battleshock loop" }
+  },
+  {
+    "id": "CORE.Command.Battleshock.OfferSelect.1",
+    "scope": "global",
+    "trigger": { "event": "BattleshockPhaseCheck" },
+    "when": {
+      "all": [
+        { "selector": { "id": "active_player_needs_battleshock" } }
+      ]
+    },
+    "effect": [
+      {
+        "addChoice": {
+          "id": "select_battleshock_unit",
+          "label": "Select a unit for battleshock test",
+          "actionRef": "CORE.Command.Battleshock.SelectAction.1",
+          "selectionFrom": { "selector": "active_player_needs_battleshock" }
+        }
+      }
+    ],
+    "precedence": { "priority": 20, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Offer unit selection for battleshock test" }
+  },
+  {
+    "id": "CORE.Command.Battleshock.SelectAction.1",
+    "scope": "global",
+    "trigger": { "event": "ChoiceSelected" },
+    "when": {
+      "all": [
+        { "eventParamEquals": { "param": "choiceId", "value": "select_battleshock_unit" } }
+      ]
+    },
+    "effect": [
+      {
+        "setValue": {
+          "path": "$.battleshock.currentUnitId",
+          "valueFromEventParam": "selectedUnitId"
+        }
+      },
+      {
+        "emit": { "eventId": "BattleshockTestBegin", "params": { "player": { "eventParam": "player" } } }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Set current unit and begin battleshock test" }
+  },
+  {
+    "id": "CORE.Command.Battleshock.CopyLd.1",
+    "scope": "global",
+    "trigger": { "event": "BattleshockTestBegin" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "setValue": {
+          "path": "$.battleshock.targetLd",
+          "valueFromDynamicPath": "$.units.{$.battleshock.currentUnitId}.stats.Ld"
+        }
+      }
+    ],
+    "precedence": { "priority": 5, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Copy unit Ld to scratch state for comparison" }
+  },
+  {
+    "id": "CORE.Command.Battleshock.Roll.1",
+    "scope": "global",
+    "trigger": { "event": "BattleshockTestBegin" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "roll": {
+          "count": 2,
+          "sides": 6,
+          "storePath": "$.battleshock.rollResult",
+          "defaults": { "rerolled": false, "spent": false }
+        }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Roll 2D6 for battleshock test" }
+  },
+  {
+    "id": "CORE.Command.Battleshock.ComputeSum.1",
+    "scope": "global",
+    "trigger": { "event": "BattleshockTestBegin" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "computePoolSum": {
+          "poolPath": "$.battleshock.rollResult",
+          "targetPath": "$.battleshock.sum"
+        }
+      }
+    ],
+    "precedence": { "priority": 15, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Compute pool sum after roll" }
+  },
+  {
+    "id": "CORE.Command.Battleshock.EmitResult.1",
+    "scope": "global",
+    "trigger": { "event": "BattleshockTestBegin" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "emit": { "eventId": "BattleshockTestResult", "params": { "player": { "eventParam": "player" } } }
+      }
+    ],
+    "precedence": { "priority": 20, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Emit BattleshockTestResult after roll and sum computation" }
+  },
+  {
+    "id": "CORE.Command.Battleshock.Resolve.AutoPass.1",
+    "scope": "global",
+    "trigger": { "event": "BattleshockTestResult" },
+    "when": {
+      "all": [
+        { "pathEquals": { "path": "$.battleshock.autoPass", "value": true } }
+      ]
+    },
+    "effect": [
+      {
+        "appendLogNote": { "message": "Battleshock test: AUTO PASS (Insane Bravery)" }
+      },
+      {
+        "setValue": { "path": "$.battleshock.autoPass", "value": false }
+      }
+    ],
+    "precedence": { "priority": 10, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Auto-pass battleshock via Insane Bravery" }
+  },
+  {
+    "id": "CORE.Command.Battleshock.Resolve.Pass.1",
+    "scope": "global",
+    "trigger": { "event": "BattleshockTestResult" },
+    "when": {
+      "all": [
+        { "pathEquals": { "path": "$.battleshock.autoPass", "value": false } },
+        { "pathAtLeastPath": { "path": "$.battleshock.sum", "valuePath": "$.battleshock.targetLd" } }
+      ]
+    },
+    "effect": [
+      {
+        "appendLogNote": { "message": "Battleshock test: PASSED" }
+      }
+    ],
+    "precedence": { "priority": 15, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Battleshock passed (sum >= Ld)" }
+  },
+  {
+    "id": "CORE.Command.Battleshock.Resolve.Fail.1",
+    "scope": "global",
+    "trigger": { "event": "BattleshockTestResult" },
+    "when": {
+      "all": [
+        { "pathEquals": { "path": "$.battleshock.autoPass", "value": false } },
+        { "not": { "pathAtLeastPath": { "path": "$.battleshock.sum", "valuePath": "$.battleshock.targetLd" } } }
+      ]
+    },
+    "effect": [
+      {
+        "appendLogNote": { "message": "Battleshock test: FAILED" }
+      },
+      {
+        "applyStatus": {
+          "target": { "path": "$.battleshock.currentUnitId" },
+          "key": "battleshocked"
+        }
+      }
+    ],
+    "precedence": { "priority": 15, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Battleshock failed (sum < Ld) -- apply battleshocked status" }
+  },
+  {
+    "id": "CORE.Command.Battleshock.Resolve.Consume.1",
+    "scope": "global",
+    "trigger": { "event": "BattleshockTestResult" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "removeStatus": {
+          "target": { "path": "$.battleshock.currentUnitId" },
+          "key": "needs_battleshock_test"
+        }
+      }
+    ],
+    "precedence": { "priority": 30, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Remove needs_battleshock_test after test completes" }
+  },
+  {
+    "id": "CORE.Command.Battleshock.Resolve.Loop.1",
+    "scope": "global",
+    "trigger": { "event": "BattleshockTestResult" },
+    "when": { "all": [] },
+    "effect": [
+      {
+        "emit": { "eventId": "BattleshockPhaseCheck", "params": { "player": { "eventParam": "player" } } }
+      }
+    ],
+    "precedence": { "priority": 40, "strategy": "stack" },
+    "provenance": { "source": "Core Rules", "note": "Loop back to check for more units needing battleshock" }
   }
 ]
