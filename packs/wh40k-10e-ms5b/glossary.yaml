@@ -46,7 +46,7 @@ selectors:
     kind: unit
     where:
       pathEquals:
-        path: "$.turnPlayer"
+        path: "$entity.owner"
         valueFromEventParam: player
 
   units_can_move:
