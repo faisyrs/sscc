@@ -1,0 +1,31 @@
+# Warhammer 40,000 10th Edition -- Glossary
+#
+# Reusable named selectors. These are convenience definitions;
+# selectors can also be defined inline in rules.
+
+selectors:
+  turnPlayer_all_units:
+    object: unit
+    where:
+      pathEquals: { path: "$entity.owner", value: { path: "$.turnPlayer" } }
+
+  turnPlayer_untested_units:
+    object: unit
+    where:
+      all:
+        - pathEquals: { path: "$entity.owner", value: { path: "$.turnPlayer" } }
+        - not: { is: "$entity.battleshocked" }
+        - not: { is: "$entity.not-battleshocked" }
+
+  opponent_all_units:
+    object: unit
+    where:
+      pathEquals: { path: "$entity.owner", value: { path: "$.opponent" } }
+
+keywords:
+  - INFANTRY
+  - VEHICLE
+  - MONSTER
+  - CHARACTER
+  - FLY
+  - PSYKER

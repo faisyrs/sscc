@@ -1,0 +1,10 @@
+# Warhammer 40,000 10th Edition -- Object Types
+#
+# Maps game concepts to state path patterns. The engine uses these
+# to enumerate object instances when evaluating selectors.
+
+objects:
+  player: "$.players"
+  unit: "$.players.*.units"
+  model: "$.players.*.units.*.models"
+  die: "$.pools.*.dice"

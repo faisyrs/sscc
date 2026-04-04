@@ -1,0 +1,25 @@
+# Warhammer 40,000 10th Edition -- Macros
+#
+# Standard dice macros. These expand to set/unset on die objects
+# at pack load time. The engine never sees them as special primitives.
+
+macros:
+  roll:
+    params: [poolPath, count, sides]
+    expands:
+      repeat: "{count}"
+      as: "i"
+      effects:
+        - set: "{poolPath}.dice.{i}.value"
+          value: { random: { min: 1, max: "{sides}" } }
+        - set: "{poolPath}.dice.{i}.sides"
+          value: "{sides}"
+
+  rerollDie:
+    params: [poolPath, dieIndex]
+    expands:
+      effects:
+        - set: "{poolPath}.dice.{dieIndex}.value"
+          value: { random: { min: 1, max: { path: "{poolPath}.dice.{dieIndex}.sides" } } }
+        - set: "{poolPath}.dice.{dieIndex}.rerolled"
+          value: true

@@ -1,0 +1,45 @@
+[
+  {
+    "id": "STRAT.InsaneBravery",
+    "when": {
+      "all": [
+        { "is": "commandPhase" },
+        { "playerChoice": { "player": "$.turnPlayer" } },
+        { "not": { "is": "insaneBraveryUsed" } },
+        { "selector": { "object": "unit", "where": {
+            "all": [
+              { "pathEquals": { "path": "$entity.owner", "value": { "path": "$.turnPlayer" } } },
+              { "not": { "is": "$entity.battleshocked" } },
+              { "not": { "is": "$entity.not-battleshocked" } }
+            ]
+        } } }
+      ]
+    },
+    "label": "Insane Bravery (auto-pass battleshock for one unit)",
+    "costs": { "cp": 1 },
+    "effect": [
+      { "set": "$.battleshock.selectedUnit", "valueFromChoice": "selectedUnitId" },
+      { "set": "$.battleshock.selectedUnit.not-battleshocked", "value": true },
+      { "set": "insaneBraveryUsed" }
+    ],
+    "provenance": { "source": "Core Rules", "section": "Stratagems" }
+  },
+  {
+    "id": "STRAT.CommandReroll",
+    "when": {
+      "all": [
+        { "is": "battleshockRoll" },
+        { "playerChoice": { "player": "$.turnPlayer" } },
+        { "not": { "is": "commandRerollUsed" } }
+      ]
+    },
+    "label": "Command Re-roll (reroll 1 die)",
+    "costs": { "cp": 1 },
+    "effect": [
+      { "rerollDie": { "poolPath": "$.battleshock.rollResult", "dieIndex": { "pick": 1 } } },
+      { "set": "commandRerollUsed", "expiresOn": "endOfPhase" }
+    ],
+    "_note": "rerollDie is a macro -- expands to set on die object at load time",
+    "provenance": { "source": "Core Rules", "section": "Stratagems" }
+  }
+]

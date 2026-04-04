@@ -1,0 +1,62 @@
+# Warhammer 40,000 10th Edition -- Game Timeline
+#
+# The top-level sequence is the full game. Attacker/defender are
+# determined by a roll-off at startOfGame.
+
+timeline:
+  - game
+
+subSequences:
+  game:
+    - startOfGame
+    - battleRound
+    - battleRound
+    - battleRound
+    - battleRound
+    - battleRound
+    - endOfGame
+
+  battleRound:
+    - attackerTurn
+    - defenderTurn
+
+  attackerTurn:
+    - commandPhase
+    - movementPhase
+    - shootingPhase
+    - chargePhase
+    - fightPhase
+    - endOfTurn
+
+  defenderTurn:
+    - commandPhase
+    - movementPhase
+    - shootingPhase
+    - chargePhase
+    - fightPhase
+    - endOfTurn
+
+  commandPhase:
+    - commandPhase
+    - endOfPhase
+
+  movementPhase:
+    - movementPhase
+    - endOfPhase
+
+  shootingPhase:
+    - shootingPhase
+    - endOfPhase
+
+  chargePhase:
+    - chargePhase
+    - endOfPhase
+
+  fightPhase:
+    - fightPhase
+    - endOfPhase
+
+  # Sub-sequences invoked by rules
+  battleshockTest:
+    - battleshockRoll
+    - battleshockCompare

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "CORE.AttackerTurn.SetPlayer",
+    "when": { "on": "attackerTurn" },
+    "label": "Set active player (attacker)",
+    "effect": [
+      { "set": "$.turnPlayer", "value": { "path": "$.attacker" } },
+      { "set": "$.opponent", "value": { "path": "$.defender" } }
+    ]
+  },
+  {
+    "id": "CORE.DefenderTurn.SetPlayer",
+    "when": { "on": "defenderTurn" },
+    "label": "Set active player (defender)",
+    "effect": [
+      { "set": "$.turnPlayer", "value": { "path": "$.defender" } },
+      { "set": "$.opponent", "value": { "path": "$.attacker" } }
+    ]
+  }
+]

@@ -1,0 +1,51 @@
+# Warhammer 40,000 10th Edition -- Derived State Definitions
+#
+# Computed values: base + modifiers, with optional clamp.
+# Most characteristics cap at +1/-1 from base per Warhammer rules.
+
+derivedState:
+  CurrentLeadership:
+    base: { path: "$.selectedUnit.BaseLeadership" }
+    modifiers: { match: "$.selectedUnit.CurrentLeadership.modifier*" }
+    aggregate: sum
+    clamp:
+      min: { offset: -1 }
+      max: { offset: +1 }
+
+  CurrentMove:
+    base: { path: "$.selectedUnit.BaseMove" }
+    modifiers: { match: "$.selectedUnit.CurrentMove.modifier*" }
+    aggregate: sum
+    # Move is not clamped
+
+  CurrentToughness:
+    base: { path: "$.selectedUnit.BaseToughness" }
+    modifiers: { match: "$.selectedUnit.CurrentToughness.modifier*" }
+    aggregate: sum
+    clamp:
+      min: { offset: -1 }
+      max: { offset: +1 }
+
+  CurrentSave:
+    base: { path: "$.selectedUnit.BaseSave" }
+    modifiers: { match: "$.selectedUnit.CurrentSave.modifier*" }
+    aggregate: sum
+    clamp:
+      min: { offset: -1 }
+      max: { offset: +1 }
+
+  CurrentToHit:
+    base: { path: "$.selectedUnit.BaseToHit" }
+    modifiers: { match: "$.selectedUnit.CurrentToHit.modifier*" }
+    aggregate: sum
+    clamp:
+      min: { offset: -1 }
+      max: { offset: +1 }
+
+  CurrentToWound:
+    base: { path: "$.selectedUnit.BaseToWound" }
+    modifiers: { match: "$.selectedUnit.CurrentToWound.modifier*" }
+    aggregate: sum
+    clamp:
+      min: { offset: -1 }
+      max: { offset: +1 }

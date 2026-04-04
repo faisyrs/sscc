@@ -1,0 +1,33 @@
+[
+  {
+    "id": "CORE.Battleshock.Roll",
+    "when": { "on": "battleshockRoll" },
+    "label": "Roll battleshock test",
+    "effect": [
+      { "roll": { "count": 2, "sides": 6, "storePath": "$.battleshock.rollResult" } }
+    ],
+    "_note": "roll is a macro -- expands to set on die objects at load time",
+    "provenance": { "source": "Core Rules", "section": "Battleshock Tests" }
+  },
+  {
+    "id": "CORE.Battleshock.Compare",
+    "when": { "on": "battleshockCompare" },
+    "label": "Resolve battleshock test",
+    "effect": [
+      {
+        "test": {
+          "usePool": "$.battleshock.rollResult",
+          "compare": "gte",
+          "target": { "derived": "CurrentLeadership", "unit": { "path": "$.battleshock.selectedUnit" } },
+          "pass": [
+            { "set": "$.battleshock.selectedUnit.not-battleshocked", "value": true }
+          ],
+          "fail": [
+            { "set": "$.battleshock.selectedUnit.battleshocked", "value": true }
+          ]
+        }
+      }
+    ],
+    "provenance": { "source": "Core Rules", "section": "Battleshock Tests" }
+  }
+]
