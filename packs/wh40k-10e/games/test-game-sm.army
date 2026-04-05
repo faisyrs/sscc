@@ -1,0 +1,10 @@
+include:
+  - ../space-marines/sm-army.rules
+
+units:
+  - template: intercessors
+    bind: { owner: player2, id: intercessors_1 }
+  - template: intercessors
+    bind: { owner: player2, id: intercessors_2 }
+  - template: captain
+    bind: { owner: player2, id: captain_1 }

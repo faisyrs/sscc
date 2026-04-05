@@ -1,0 +1,117 @@
+# Shooting Phase -- select attacker, select target, resolve attacks
+
+CORE.Shooting.SelectAttacker:
+  when:
+    all:
+      - is: shootingPhase
+      - selector:
+          object: unit
+          where:
+            all:
+              - pathEquals: { path: "$entity.owner", value: { path: "$.turnPlayer" } }
+              - pathMissing: "$entity.hasShotThisPhase"
+              - not:
+                  pathEquals: { path: "$entity.fellBack", value: true }
+  effect:
+    - set: "$.shooting.attacker"
+      valueFromChoice: selectedUnitId
+    - sequence: shootingAttack
+  label: "Select unit to shoot"
+
+# Sub-sequences for shooting
+shootingAttack:
+  - selectShootingTarget
+  - hitRolls
+  - woundRolls
+  - saveRolls
+  - shootingDamage
+
+selectShootingTarget:
+  - event
+hitRolls:
+  - event
+woundRolls:
+  - event
+saveRolls:
+  - event
+shootingDamage:
+  - event
+
+CORE.Shooting.SelectTarget:
+  when:
+    on: selectShootingTarget
+  effect:
+    - set: "$.shooting.target"
+      valueFromChoice: selectedUnitId
+    - manual: "Confirm target is in range and line of sight"
+  label: "Select target unit"
+
+CORE.Shooting.HitRolls:
+  when:
+    on: hitRolls
+  effect:
+    - test:
+        roll: { count: { path: "$.shooting.attacker.attacks" }, sides: 6 }
+        compare: gte
+        target: { derived: CurrentToHit, unit: { path: "$.shooting.attacker" } }
+        pass:
+          - set: "$.shooting.hits"
+            value: { add: 1 }
+        fail:
+          - appendLogNote: "Miss"
+  label: "Roll to hit"
+
+CORE.Shooting.WoundRolls:
+  when:
+    on: woundRolls
+  effect:
+    - test:
+        roll: { count: { path: "$.shooting.hits" }, sides: 6 }
+        compare: gte
+        target: { path: "$.shooting.woundTarget" }
+        pass:
+          - set: "$.shooting.wounds"
+            value: { add: 1 }
+        fail:
+          - appendLogNote: "Failed to wound"
+  label: "Roll to wound"
+
+CORE.Shooting.SaveRolls:
+  when:
+    on: saveRolls
+  effect:
+    - test:
+        roll: { count: { path: "$.shooting.wounds" }, sides: 6 }
+        compare: gte
+        target: { derived: CurrentSave, unit: { path: "$.shooting.target" } }
+        pass:
+          - appendLogNote: "Save successful"
+        fail:
+          - set: "$.shooting.unsavedWounds"
+            value: { add: 1 }
+  label: "Roll saves"
+
+CORE.Shooting.ApplyDamage:
+  when:
+    on: shootingDamage
+  effect:
+    - set: "$.shooting.target.wounds"
+      value: { add: { path: "$.shooting.unsavedWounds" } }
+    - set: "$.shooting.attacker.hasShotThisPhase"
+      value: true
+    - appendLogNote: "Damage applied"
+  label: "Apply damage to target"
+
+# Clean up shooting state at end of phase
+CORE.Shooting.Cleanup:
+  when:
+    on: endOfPhase
+  effect:
+    - unset: "$.shooting"
+    - unset:
+        key: hasShotThisPhase
+        target:
+          object: unit
+          where:
+            pathEquals: { path: "$entity.owner", value: { path: "$.turnPlayer" } }
+  label: "Clear shooting state"

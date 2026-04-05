@@ -1,0 +1,122 @@
+# Fight Phase -- select unit, select target, roll melee attacks
+
+CORE.Fight.SelectFighter:
+  when:
+    all:
+      - is: fightPhase
+      - selector:
+          object: unit
+          where:
+            all:
+              - pathEquals: { path: "$entity.owner", value: { path: "$.turnPlayer" } }
+              - pathMissing: "$entity.hasFoughtThisPhase"
+              - any:
+                  - pathEquals: { path: "$entity.charged", value: true }
+                  - manual: "Is this unit within Engagement Range of an enemy?"
+  effect:
+    - set: "$.fight.attacker"
+      valueFromChoice: selectedUnitId
+    - sequence: meleeAttack
+  label: "Select unit to fight"
+
+meleeAttack:
+  - selectMeleeTarget
+  - meleeHitRolls
+  - meleeWoundRolls
+  - meleeSaveRolls
+  - meleeDamage
+
+selectMeleeTarget:
+  - event
+meleeHitRolls:
+  - event
+meleeWoundRolls:
+  - event
+meleeSaveRolls:
+  - event
+meleeDamage:
+  - event
+
+CORE.Fight.SelectTarget:
+  when:
+    on: selectMeleeTarget
+  effect:
+    - set: "$.fight.target"
+      valueFromChoice: selectedUnitId
+    - manual: "Confirm target is within Engagement Range"
+  label: "Select melee target"
+
+CORE.Fight.HitRolls:
+  when:
+    on: meleeHitRolls
+  effect:
+    - test:
+        roll: { count: { path: "$.fight.attacker.meleeAttacks" }, sides: 6 }
+        compare: gte
+        target: { derived: CurrentToHit, unit: { path: "$.fight.attacker" } }
+        pass:
+          - set: "$.fight.hits"
+            value: { add: 1 }
+        fail:
+          - appendLogNote: "Melee miss"
+  label: "Roll to hit (melee)"
+
+CORE.Fight.WoundRolls:
+  when:
+    on: meleeWoundRolls
+  effect:
+    - test:
+        roll: { count: { path: "$.fight.hits" }, sides: 6 }
+        compare: gte
+        target: { path: "$.fight.woundTarget" }
+        pass:
+          - set: "$.fight.wounds"
+            value: { add: 1 }
+        fail:
+          - appendLogNote: "Failed to wound (melee)"
+  label: "Roll to wound (melee)"
+
+CORE.Fight.SaveRolls:
+  when:
+    on: meleeSaveRolls
+  effect:
+    - test:
+        roll: { count: { path: "$.fight.wounds" }, sides: 6 }
+        compare: gte
+        target: { derived: CurrentSave, unit: { path: "$.fight.target" } }
+        pass:
+          - appendLogNote: "Save successful"
+        fail:
+          - set: "$.fight.unsavedWounds"
+            value: { add: 1 }
+  label: "Roll saves (melee)"
+
+CORE.Fight.ApplyDamage:
+  when:
+    on: meleeDamage
+  effect:
+    - set: "$.fight.target.wounds"
+      value: { add: { path: "$.fight.unsavedWounds" } }
+    - set: "$.fight.attacker.hasFoughtThisPhase"
+      value: true
+    - appendLogNote: "Melee damage applied"
+  label: "Apply melee damage"
+
+CORE.Fight.Cleanup:
+  when:
+    on: endOfPhase
+  effect:
+    - unset: "$.fight"
+    - unset:
+        key: hasFoughtThisPhase
+        target:
+          object: unit
+          where:
+            pathEquals: { path: "$entity.owner", value: { path: "$.turnPlayer" } }
+    - unset:
+        key: charged
+        target:
+          object: unit
+          where:
+            pathEquals: { path: "$entity.owner", value: { path: "$.turnPlayer" } }
+  label: "Clear fight state"

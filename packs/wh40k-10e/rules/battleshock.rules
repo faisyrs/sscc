@@ -1,0 +1,46 @@
+# Battleshock -- sub-sequence and resolution rules
+
+# Sub-sequence for battleshock test
+battleshockTest:
+  - battleshockRoll
+  - battleshockCompare
+
+battleshockRoll:
+  - event
+
+battleshockCompare:
+  - event
+
+CORE.Battleshock.Roll:
+  when:
+    on: battleshockRoll
+  effect:
+    - test:
+        roll: { count: 2, sides: 6 }
+        compare: gte
+        target: { value: 0 }
+        pass:
+          - set: "$.battleshock.rollResult"
+            value: { path: "$.lastRoll" }
+        fail: []
+  label: "Roll battleshock test"
+  provenance: { source: "Core Rules", section: "Battleshock Tests" }
+
+CORE.Battleshock.Compare:
+  when:
+    on: battleshockCompare
+  effect:
+    - test:
+        usePool: "$.battleshock.rollResult"
+        compare: gte
+        target:
+          derived: CurrentLeadership
+          unit: { path: "$.battleshock.selectedUnit" }
+        pass:
+          - set: "$.battleshock.selectedUnit.not-battleshocked"
+            value: true
+        fail:
+          - set: "$.battleshock.selectedUnit.battleshocked"
+            value: true
+  label: "Resolve battleshock test"
+  provenance: { source: "Core Rules", section: "Battleshock Tests" }

@@ -1,0 +1,47 @@
+# Command Phase -- clear battleshock, gain CP, trigger battleshock tests
+
+CORE.Command.ClearBattleshock:
+  when:
+    on: commandPhase
+  effect:
+    - unset:
+        key: battleshocked
+        target:
+          object: unit
+          where:
+            pathEquals: { path: "$entity.owner", value: { path: "$.turnPlayer" } }
+    - unset:
+        key: not-battleshocked
+        target:
+          object: unit
+          where:
+            pathEquals: { path: "$entity.owner", value: { path: "$.turnPlayer" } }
+  label: "Clear battleshock state from previous round"
+  provenance: { source: "Core Rules", section: "Command Phase" }
+
+CORE.Command.GainCP:
+  when:
+    on: commandPhase
+  effect:
+    - set: "$.turnPlayer.cp"
+      value: { add: 1 }
+  label: "Gain 1 CP"
+  provenance: { source: "Core Rules", section: "Command Phase" }
+
+CORE.Command.BattleshockEligible:
+  when:
+    all:
+      - is: commandPhase
+      - selector:
+          object: unit
+          where:
+            all:
+              - pathEquals: { path: "$entity.owner", value: { path: "$.turnPlayer" } }
+              - not: { is: "$entity.battleshocked" }
+              - not: { is: "$entity.not-battleshocked" }
+  effect:
+    - set: "$.battleshock.selectedUnit"
+      valueFromChoice: selectedUnitId
+    - sequence: battleshockTest
+  label: "Battleshock test (select unit)"
+  provenance: { source: "Core Rules", section: "Battleshock Tests" }

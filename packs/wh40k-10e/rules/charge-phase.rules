@@ -1,0 +1,92 @@
+# Charge Phase -- select unit, declare charge target, roll charge
+
+CORE.Charge.SelectCharger:
+  when:
+    all:
+      - is: chargePhase
+      - selector:
+          object: unit
+          where:
+            all:
+              - pathEquals: { path: "$entity.owner", value: { path: "$.turnPlayer" } }
+              - pathMissing: "$entity.hasChargedThisPhase"
+              - not:
+                  pathEquals: { path: "$entity.advanced", value: true }
+              - not:
+                  pathEquals: { path: "$entity.fellBack", value: true }
+  effect:
+    - set: "$.charge.charger"
+      valueFromChoice: selectedUnitId
+    - sequence: chargeAttempt
+  label: "Select unit to charge"
+
+chargeAttempt:
+  - chargeRoll
+  - chargeResult
+
+chargeRoll:
+  - event
+
+chargeResult:
+  - event
+
+CORE.Charge.DeclareTarget:
+  when:
+    on: chargeRoll
+  effect:
+    - set: "$.charge.target"
+      valueFromChoice: selectedUnitId
+    - manual: "Confirm charge target is within 12\""
+  label: "Declare charge target"
+
+CORE.Charge.Roll:
+  when:
+    on: chargeRoll
+  effect:
+    - test:
+        roll: { count: 2, sides: 6 }
+        compare: gte
+        target: { value: 0 }
+        pass:
+          - set: "$.charge.rollResult"
+            value: { path: "$.lastRoll" }
+        fail: []
+    - manual: "Is the charge distance sufficient to reach the target?"
+  label: "Roll charge distance (2D6)"
+
+CORE.Charge.Success:
+  when:
+    all:
+      - on: chargeResult
+      - pathEquals: { path: "$.charge.success", value: true }
+  effect:
+    - set: "$.charge.charger.hasChargedThisPhase"
+      value: true
+    - set: "$.charge.charger.charged"
+      value: true
+    - appendLogNote: "Charge successful"
+  label: "Charge succeeded"
+
+CORE.Charge.Failure:
+  when:
+    all:
+      - on: chargeResult
+      - pathMissing: "$.charge.success"
+  effect:
+    - set: "$.charge.charger.hasChargedThisPhase"
+      value: true
+    - appendLogNote: "Charge failed"
+  label: "Charge failed"
+
+CORE.Charge.Cleanup:
+  when:
+    on: endOfPhase
+  effect:
+    - unset: "$.charge"
+    - unset:
+        key: hasChargedThisPhase
+        target:
+          object: unit
+          where:
+            pathEquals: { path: "$entity.owner", value: { path: "$.turnPlayer" } }
+  label: "Clear charge state"

@@ -1,0 +1,23 @@
+captain:
+  template: unit
+  params: [owner, id]
+  state:
+    path: "$.players.{owner}.units.{id}"
+    value:
+      name: "Captain"
+      owner: "{owner}"
+      models: 1
+      stats:
+        M: 6
+        T: 4
+        Sv: 3
+        W: 5
+        Ld: 6
+        OC: 1
+      BaseLeadership: 6
+      BaseToughness: 4
+      BaseSave: 3
+      attacks: 5
+      meleeAttacks: 6
+      BaseToHit: 2
+      keywords: [INFANTRY, CHARACTER, IMPERIUM, ADEPTUS ASTARTES]

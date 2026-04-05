@@ -1,0 +1,21 @@
+# Turn Entry -- set active player and opponent
+
+CORE.AttackerTurn.SetPlayer:
+  when:
+    on: attackerTurn
+  effect:
+    - set: "$.turnPlayer"
+      value: { path: "$.attacker" }
+    - set: "$.opponent"
+      value: { path: "$.defender" }
+  label: "Set active player (attacker)"
+
+CORE.DefenderTurn.SetPlayer:
+  when:
+    on: defenderTurn
+  effect:
+    - set: "$.turnPlayer"
+      value: { path: "$.defender" }
+    - set: "$.opponent"
+      value: { path: "$.attacker" }
+  label: "Set active player (defender)"

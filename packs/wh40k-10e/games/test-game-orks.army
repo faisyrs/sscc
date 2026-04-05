@@ -1,0 +1,10 @@
+include:
+  - ../orks/ork-army.rules
+
+units:
+  - template: boyz
+    bind: { owner: player1, id: boyz_1 }
+  - template: boyz
+    bind: { owner: player1, id: boyz_2 }
+  - template: warboss
+    bind: { owner: player1, id: warboss_1 }

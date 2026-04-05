@@ -1,0 +1,88 @@
+# Movement Phase -- abstract movement type selection per unit
+# The engine does not track positions; physical movement is manual.
+
+CORE.Movement.SelectUnit:
+  when:
+    all:
+      - is: movementPhase
+      - selector:
+          object: unit
+          where:
+            all:
+              - pathEquals: { path: "$entity.owner", value: { path: "$.turnPlayer" } }
+              - pathMissing: "$entity.movementType"
+  effect:
+    - set: "$.movement.selectedUnit"
+      valueFromChoice: selectedUnitId
+    - sequence: movementChoice
+  label: "Select unit to move"
+
+# Sub-sequence for movement type selection
+movementChoice:
+  - movementTypeSelect
+
+movementTypeSelect:
+  - event
+
+CORE.Movement.NormalMove:
+  when:
+    all:
+      - is: movementTypeSelect
+      - playerChoice: { player: "$.turnPlayer" }
+  effect:
+    - set: "$.movement.selectedUnit.movementType"
+      value: "normal"
+    - appendLogNote: "Unit moved (Normal Move)"
+  label: "Normal Move"
+
+CORE.Movement.Advance:
+  when:
+    all:
+      - is: movementTypeSelect
+      - playerChoice: { player: "$.turnPlayer" }
+  effect:
+    - set: "$.movement.selectedUnit.movementType"
+      value: "advance"
+    - set: "$.movement.selectedUnit.advanced"
+      value: true
+    - appendLogNote: "Unit advanced"
+  label: "Advance"
+
+CORE.Movement.RemainStationary:
+  when:
+    all:
+      - is: movementTypeSelect
+      - playerChoice: { player: "$.turnPlayer" }
+  effect:
+    - set: "$.movement.selectedUnit.movementType"
+      value: "stationary"
+    - set: "$.movement.selectedUnit.remainedStationary"
+      value: true
+    - appendLogNote: "Unit remained stationary"
+  label: "Remain Stationary"
+
+CORE.Movement.FallBack:
+  when:
+    all:
+      - is: movementTypeSelect
+      - playerChoice: { player: "$.turnPlayer" }
+  effect:
+    - set: "$.movement.selectedUnit.movementType"
+      value: "fallBack"
+    - set: "$.movement.selectedUnit.fellBack"
+      value: true
+    - appendLogNote: "Unit fell back"
+  label: "Fall Back"
+
+# Clear movement state at end of phase
+CORE.Movement.ClearMovement:
+  when:
+    on: endOfPhase
+  effect:
+    - unset:
+        key: movementType
+        target:
+          object: unit
+          where:
+            pathEquals: { path: "$entity.owner", value: { path: "$.turnPlayer" } }
+  label: "Clear movement flags"

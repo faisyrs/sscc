@@ -1,0 +1,23 @@
+intercessors:
+  template: unit
+  params: [owner, id]
+  state:
+    path: "$.players.{owner}.units.{id}"
+    value:
+      name: "Intercessor Squad"
+      owner: "{owner}"
+      models: 5
+      stats:
+        M: 6
+        T: 4
+        Sv: 3
+        W: 2
+        Ld: 6
+        OC: 2
+      BaseLeadership: 6
+      BaseToughness: 4
+      BaseSave: 3
+      attacks: 2
+      meleeAttacks: 3
+      BaseToHit: 3
+      keywords: [INFANTRY, BATTLELINE, IMPERIUM, ADEPTUS ASTARTES]

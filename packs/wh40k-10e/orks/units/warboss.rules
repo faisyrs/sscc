@@ -1,0 +1,23 @@
+warboss:
+  template: unit
+  params: [owner, id]
+  state:
+    path: "$.players.{owner}.units.{id}"
+    value:
+      name: "Warboss"
+      owner: "{owner}"
+      models: 1
+      stats:
+        M: 6
+        T: 5
+        Sv: 4
+        W: 6
+        Ld: 6
+        OC: 1
+      BaseLeadership: 6
+      BaseToughness: 5
+      BaseSave: 4
+      attacks: 4
+      meleeAttacks: 5
+      BaseToHit: 2
+      keywords: [INFANTRY, CHARACTER, ORK]

@@ -1,0 +1,38 @@
+# Stratagems -- optional abilities costing CP
+
+STRAT.InsaneBravery:
+  when:
+    all:
+      - is: commandPhase
+      - playerChoice: { player: "$.turnPlayer" }
+      - not: { is: insaneBraveryUsed }
+      - selector:
+          object: unit
+          where:
+            all:
+              - pathEquals: { path: "$entity.owner", value: { path: "$.turnPlayer" } }
+              - not: { is: "$entity.battleshocked" }
+              - not: { is: "$entity.not-battleshocked" }
+  costs: { cp: 1 }
+  effect:
+    - set: "$.battleshock.selectedUnit"
+      valueFromChoice: selectedUnitId
+    - set: "$.battleshock.selectedUnit.not-battleshocked"
+      value: true
+    - set: insaneBraveryUsed
+  label: "Insane Bravery (auto-pass battleshock, 1 CP)"
+  provenance: { source: "Core Rules", section: "Stratagems" }
+
+STRAT.CommandReroll:
+  when:
+    all:
+      - is: battleshockRoll
+      - playerChoice: { player: "$.turnPlayer" }
+      - not: { is: commandRerollUsed }
+  costs: { cp: 1 }
+  effect:
+    - rerollDie: { poolPath: "$.battleshock.rollResult", dieIndex: { pick: 1 } }
+    - set: commandRerollUsed
+      expiresOn: endOfPhase
+  label: "Command Re-roll (reroll 1 battleshock die, 1 CP)"
+  provenance: { source: "Core Rules", section: "Stratagems" }

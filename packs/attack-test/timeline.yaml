@@ -1,6 +1,0 @@
-timeline:
-  - event: SetupAttack
-  - event: RollToHit
-  - event: ResolveHitResults
-
-subSequences: {}

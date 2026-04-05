@@ -1,0 +1,3 @@
+include:
+  - units/intercessors.rules
+  - units/captain.rules

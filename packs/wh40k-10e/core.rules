@@ -1,0 +1,156 @@
+# Warhammer 40,000 10th Edition -- Core Rules
+
+include:
+  - rules/turn-entry.rules
+  - rules/command-phase.rules
+  - rules/battleshock.rules
+  - rules/movement-phase.rules
+  - rules/shooting-phase.rules
+  - rules/charge-phase.rules
+  - rules/fight-phase.rules
+  - rules/stratagems.rules
+
+objects:
+  player: "$.players"
+  unit: "$.players.*.units"
+  model: "$.players.*.units.*.models"
+  die: "$.pools.*.dice"
+
+macros:
+  roll:
+    params: [poolPath, count, sides]
+    expands:
+      repeat: "{count}"
+      as: "i"
+      effects:
+        - set: "{poolPath}.dice.{i}.value"
+          value: { random: { min: 1, max: "{sides}" } }
+        - set: "{poolPath}.dice.{i}.sides"
+          value: "{sides}"
+  rerollDie:
+    params: [poolPath, dieIndex]
+    expands:
+      effects:
+        - set: "{poolPath}.dice.{dieIndex}.value"
+          value: { random: { min: 1, max: { path: "{poolPath}.dice.{dieIndex}.sides" } } }
+        - set: "{poolPath}.dice.{dieIndex}.rerolled"
+          value: true
+
+derived:
+  CurrentLeadership:
+    base: { path: "$.selectedUnit.BaseLeadership" }
+    modifiers: { match: "$.selectedUnit.CurrentLeadership.modifier*" }
+    aggregate: sum
+    clamp: { min: { offset: -1 }, max: { offset: 1 } }
+  CurrentMove:
+    base: { path: "$.selectedUnit.BaseMove" }
+    modifiers: { match: "$.selectedUnit.CurrentMove.modifier*" }
+    aggregate: sum
+  CurrentToughness:
+    base: { path: "$.selectedUnit.BaseToughness" }
+    modifiers: { match: "$.selectedUnit.CurrentToughness.modifier*" }
+    aggregate: sum
+    clamp: { min: { offset: -1 }, max: { offset: 1 } }
+  CurrentSave:
+    base: { path: "$.selectedUnit.BaseSave" }
+    modifiers: { match: "$.selectedUnit.CurrentSave.modifier*" }
+    aggregate: sum
+    clamp: { min: { offset: -1 }, max: { offset: 1 } }
+  CurrentToHit:
+    base: { path: "$.selectedUnit.BaseToHit" }
+    modifiers: { match: "$.selectedUnit.CurrentToHit.modifier*" }
+    aggregate: sum
+    clamp: { min: { offset: -1 }, max: { offset: 1 } }
+  CurrentToWound:
+    base: { path: "$.selectedUnit.BaseToWound" }
+    modifiers: { match: "$.selectedUnit.CurrentToWound.modifier*" }
+    aggregate: sum
+    clamp: { min: { offset: -1 }, max: { offset: 1 } }
+
+selectors:
+  turnPlayer_all_units:
+    object: unit
+    where:
+      pathEquals: { path: "$entity.owner", value: { path: "$.turnPlayer" } }
+  turnPlayer_untested_units:
+    object: unit
+    where:
+      all:
+        - pathEquals: { path: "$entity.owner", value: { path: "$.turnPlayer" } }
+        - not: { is: "$entity.battleshocked" }
+        - not: { is: "$entity.not-battleshocked" }
+  opponent_all_units:
+    object: unit
+    where:
+      pathEquals: { path: "$entity.owner", value: { path: "$.opponent" } }
+
+keywords:
+  - INFANTRY
+  - VEHICLE
+  - MONSTER
+  - CHARACTER
+  - FLY
+  - PSYKER
+  - BATTLELINE
+  - MOB
+  - ORK
+  - IMPERIUM
+  - ADEPTUS ASTARTES
+
+# ---- Timeline ----
+
+game:
+  - startOfGame
+  - battleRound:
+      repeat: 5
+  - endOfGame
+
+battleRound:
+  - { sequence: attackerTurn }
+  - { sequence: defenderTurn }
+
+attackerTurn:
+  - event
+  - { sequence: playerTurn }
+
+defenderTurn:
+  - event
+  - { sequence: playerTurn }
+
+playerTurn:
+  - { sequence: commandPhase }
+  - { sequence: movementPhase }
+  - { sequence: shootingPhase }
+  - { sequence: chargePhase }
+  - { sequence: fightPhase }
+  - endOfTurn
+
+commandPhase:
+  - event
+  - endOfPhase
+
+movementPhase:
+  - event
+  - endOfPhase
+
+shootingPhase:
+  - event
+  - endOfPhase
+
+chargePhase:
+  - event
+  - endOfPhase
+
+fightPhase:
+  - event
+  - endOfPhase
+
+# Event leaf nodes
+startOfGame:
+  - event
+endOfGame:
+  - event
+endOfPhase:
+  - event
+endOfTurn:
+  - event
