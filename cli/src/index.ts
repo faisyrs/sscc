@@ -1,86 +1,111 @@
-import { resolve } from "node:path";
-import { loadPack } from "../../engine/src/loader/index.js";
-import { SSCCEngine } from "../../engine/src/engine/index.js";
-import { runGameLoop } from "./game-loop.js";
+#!/usr/bin/env node
+import * as readline from 'readline';
+import { loadPack, SSCCEngine } from '@sscc/engine';
+import type { PlayerChoiceFn, MatchedRule, State, RuleLoopChoice } from '@sscc/engine';
+import { renderEventBanner, renderChoices, renderState, renderLog } from './renderer.js';
 
-function printUsage(): void {
-  console.log("Usage: sscc-cli <pack-path> [options]");
-  console.log("");
-  console.log("Options:");
-  console.log("  --seed <N>   Fixed RNG seed (default: random)");
-  console.log("  --step       Start in step-by-step mode");
-  console.log("  --help       Show this help");
+const args = process.argv.slice(2);
+
+// Extract --seed flag
+let seed: number | undefined;
+const seedIdx = args.indexOf('--seed');
+if (seedIdx !== -1 && seedIdx + 1 < args.length) {
+  seed = parseInt(args[seedIdx + 1], 10);
+  args.splice(seedIdx, 2);
 }
 
-function parseArgs(args: string[]): {
-  packPath: string;
-  seed: number | undefined;
-  stepMode: boolean;
-} {
-  let packPath = "";
-  let seed: number | undefined;
-  let stepMode = false;
+if (args.length < 3) {
+  console.error('Usage: sscc <core.rules> <army1.army> <army2.army> [--seed N]');
+  process.exit(1);
+}
 
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    if (arg === "--seed" && i + 1 < args.length) {
-      seed = parseInt(args[++i], 10);
-      if (isNaN(seed)) {
-        console.error("Error: --seed requires a numeric value");
-        process.exit(1);
+const [coreRules, ...armyFiles] = args;
+
+async function main() {
+  console.log('Loading pack...');
+  const pack = await loadPack(coreRules, armyFiles);
+  console.log(`Loaded: ${pack.rules.length} rules, ${pack.sequences.size} sequences`);
+
+  // Create readline interface
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  const ask = (q: string): Promise<string> => new Promise(resolve => rl.question(q, resolve));
+
+  // Player choice callback
+  const playerChoice: PlayerChoiceFn = async (options, canPass, state) => {
+    console.log(renderState(state));
+    console.log(renderChoices(options, canPass));
+
+    while (true) {
+      const input = (await ask('\n> ')).trim().toLowerCase();
+
+      if (input === 'p' && canPass) return { type: 'pass' };
+      if (input === 'help') {
+        console.log(
+          '  Commands: 1-N (select), P (pass), E (edit), U (undo), log, state, quit',
+        );
+        continue;
       }
-    } else if (arg === "--step") {
-      stepMode = true;
-    } else if (arg === "--help") {
-      printUsage();
-      process.exit(0);
-    } else if (!arg.startsWith("-")) {
-      packPath = arg;
-    } else {
-      console.error(`Unknown option: ${arg}`);
-      printUsage();
-      process.exit(1);
+      if (input === 'e') {
+        const path = await ask('  Path: ');
+        const valueStr = await ask('  Value (JSON): ');
+        try {
+          return {
+            type: 'editState',
+            editPath: path.trim(),
+            editValue: JSON.parse(valueStr.trim()),
+          };
+        } catch {
+          console.log('  Invalid JSON.');
+          continue;
+        }
+      }
+      if (input === 'u') {
+        console.log('  (Undo not yet connected at this level)');
+        continue;
+      }
+      if (input === 'log') {
+        console.log(renderLog(engine.getLog()));
+        continue;
+      }
+      if (input === 'state') {
+        console.log(JSON.stringify(engine.getState(), null, 2));
+        continue;
+      }
+      if (input === 'q' || input === 'quit') {
+        rl.close();
+        process.exit(0);
+      }
+
+      const num = parseInt(input, 10);
+      if (num >= 1 && num <= options.length) {
+        return { type: 'rule', rule: options[num - 1].rule };
+      }
+
+      console.log(
+        `  Enter 1-${options.length}${canPass ? ', P' : ''}, E, or quit.`,
+      );
     }
+  };
+
+  const engine = new SSCCEngine(pack, playerChoice, seed);
+
+  console.log('\n  SSCC Engine v0.1.0 — Interactive Mode');
+  console.log('  Type "help" at any prompt.\n');
+
+  // Main event loop
+  while (true) {
+    const result = await engine.advanceToNextEvent();
+    if (!result) {
+      console.log('\n=== GAME OVER ===');
+      break;
+    }
+    console.log(`\n--- ${result.event} ---`);
   }
 
-  if (!packPath) {
-    console.error("Error: pack path is required");
-    printUsage();
-    process.exit(1);
-  }
-
-  return { packPath, seed, stepMode };
+  rl.close();
 }
 
-async function main(): Promise<void> {
-  const { packPath, seed, stepMode } = parseArgs(process.argv.slice(2));
-  const resolvedPath = resolve(packPath);
-
-  console.log(`Loading pack from: ${resolvedPath}`);
-  const result = await loadPack(resolvedPath);
-
-  if (!result.ok) {
-    console.error("Pack validation failed:");
-    for (const err of result.errors) {
-      console.error(`  ${err.field}: ${err.message}`);
-    }
-    process.exit(1);
-  }
-
-  const actualSeed = seed ?? Math.floor(Math.random() * 100000);
-  console.log(`Seed: ${actualSeed}`);
-
-  const engine = new SSCCEngine(result.pack!, { seed: actualSeed });
-  engine.initialize();
-
-  console.log(`Pack loaded: ${result.pack!.manifest.name}`);
-  console.log(stepMode ? "Mode: step-by-step" : "Mode: auto-advance");
-  console.log("Type 'help' for commands.\n");
-
-  await runGameLoop(engine, { stepMode });
-}
-
-main().catch((err) => {
-  console.error("Fatal error:", err.message);
+main().catch(err => {
+  console.error('Error:', err.message);
   process.exit(1);
 });

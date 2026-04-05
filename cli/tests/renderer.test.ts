@@ -1,140 +1,153 @@
-import { describe, it, expect } from "vitest";
-import {
-  renderHeader,
-  renderUnits,
-  renderDicePool,
-  renderChoices,
-  renderEventLine,
-} from "../src/renderer.js";
-import type { State, GameEvent, ChoiceInstance } from "../../engine/src/types/index.js";
+import { describe, it, expect } from 'vitest';
+import { renderEventBanner, renderChoices, renderState, renderLog } from '../src/renderer.js';
+import type { MatchedRule, State, LogEntry } from '@sscc/engine';
 
-describe("renderHeader", () => {
-  it("formats round, phase, and player", () => {
-    const event: GameEvent = { id: "ShootingPhaseStart", params: { player: "attacker" } };
-    const state: State = { battleRound: 2 };
-    const output = renderHeader(state, event);
-    expect(output).toContain("Battle Round 2");
-    expect(output).toContain("Shooting");
-    expect(output).toContain("attacker");
+describe('renderEventBanner', () => {
+  it('includes the event name', () => {
+    const result = renderEventBanner('command-phase');
+    expect(result).toContain('EVENT: command-phase');
   });
 
-  it("handles missing battleRound gracefully", () => {
-    const event: GameEvent = { id: "StartOfGame", params: {} };
-    const state: State = {};
-    const output = renderHeader(state, event);
-    expect(output).toContain("StartOfGame");
+  it('includes separator lines', () => {
+    const result = renderEventBanner('movement-phase');
+    expect(result).toContain('='.repeat(50));
   });
 });
 
-describe("renderUnits", () => {
-  it("lists units grouped by owner", () => {
-    const state: State = {
-      units: {
-        tactical_squad: {
-          id: "tactical_squad",
-          owner: "attacker",
-          keywords: ["INFANTRY"],
-          statuses: {},
-        },
-        intercessors: {
-          id: "intercessors",
-          owner: "defender",
-          keywords: ["INFANTRY", "PRIMARIS"],
-          statuses: { overwatchReady: { expiresOn: null } },
-        },
-      },
-    };
-    const output = renderUnits(state);
-    expect(output).toContain("attacker");
-    expect(output).toContain("tactical_squad");
-    expect(output).toContain("INFANTRY");
-    expect(output).toContain("defender");
-    expect(output).toContain("intercessors");
-    expect(output).toContain("overwatchReady");
+describe('renderChoices', () => {
+  const options: MatchedRule[] = [
+    {
+      rule: { id: 'r1', label: 'Fire Overwatch', when: { is: 'test' }, effect: [], costs: { cp: 1 } },
+      mandatory: false,
+    },
+    {
+      rule: { id: 'r2', label: 'Advance', when: { is: 'test' }, effect: [] },
+      mandatory: true,
+    },
+  ];
+
+  it('numbers each option starting at 1', () => {
+    const result = renderChoices(options, false);
+    expect(result).toContain('[1]');
+    expect(result).toContain('[2]');
   });
 
-  it("returns empty string when no units", () => {
-    const output = renderUnits({});
-    expect(output).toBe("");
-  });
-});
-
-describe("renderDicePool", () => {
-  it("formats dice with indices and spent markers", () => {
-    const state: State = {
-      blessingsRoll: {
-        count: 4,
-        d0: { value: 1, rerolled: false, spent: false },
-        d1: { value: 6, rerolled: false, spent: true },
-        d2: { value: 6, rerolled: false, spent: false },
-        d3: { value: 3, rerolled: true, spent: false },
-      },
-    };
-    const output = renderDicePool(state);
-    expect(output).toContain("[0] 1");
-    expect(output).toContain("[1] 6*");
-    expect(output).toContain("[2] 6");
-    expect(output).toContain("[3] 3");
-    expect(output).toContain("* = spent");
+  it('shows MUST tag for mandatory rules', () => {
+    const result = renderChoices(options, false);
+    expect(result).toContain('Advance (MUST)');
   });
 
-  it("returns empty string when no pools found", () => {
-    const output = renderDicePool({ someValue: 42 });
-    expect(output).toBe("");
+  it('shows OPT tag for optional rules', () => {
+    const result = renderChoices(options, false);
+    expect(result).toContain('Fire Overwatch (OPT)');
   });
-});
 
-describe("renderChoices", () => {
-  it("formats choices with pass option", () => {
-    const choices: ChoiceInstance[] = [
-      {
-        choiceInstanceId: "ci_1",
-        choiceId: "warp_blades",
-        label: "Warp Blades (double 5+ or triple)",
-        actionRef: "doWarpBlades",
-        player: "attacker",
-        sourceRuleId: "r1",
-        createdAtEvent: "Blessings",
-        state: "offered",
-        pick: 2,
-      },
-      {
-        choiceInstanceId: "ci_2",
-        choiceId: "wrathful",
-        label: "Wrathful Devotion (any double)",
-        actionRef: "doWrathful",
-        player: "attacker",
-        sourceRuleId: "r2",
-        createdAtEvent: "Blessings",
-        state: "offered",
-        pick: 2,
-      },
+  it('shows costs when present', () => {
+    const result = renderChoices(options, false);
+    expect(result).toContain('[1 CP]');
+  });
+
+  it('shows pass option when canPass is true', () => {
+    const result = renderChoices(options, true);
+    expect(result).toContain('[P] Pass');
+  });
+
+  it('omits pass option when canPass is false', () => {
+    const result = renderChoices(options, false);
+    expect(result).not.toContain('[P] Pass');
+  });
+
+  it('always shows Edit State and Undo options', () => {
+    const result = renderChoices(options, false);
+    expect(result).toContain('[E] Edit State');
+    expect(result).toContain('[U] Undo');
+  });
+
+  it('falls back to rule id when label is missing', () => {
+    const noLabel: MatchedRule[] = [
+      { rule: { id: 'rule-no-label', when: { is: 'x' }, effect: [] }, mandatory: false },
     ];
-    const output = renderChoices(choices);
-    expect(output).toContain("0. Pass");
-    expect(output).toContain("1. Warp Blades");
-    expect(output).toContain("[pick 2 dice]");
-    expect(output).toContain("2. Wrathful Devotion");
-  });
-
-  it("returns empty string for no choices", () => {
-    const output = renderChoices([]);
-    expect(output).toBe("");
+    const result = renderChoices(noLabel, false);
+    expect(result).toContain('rule-no-label');
   });
 });
 
-describe("renderEventLine", () => {
-  it("formats a simple event", () => {
-    const event: GameEvent = { id: "SetupAttack", params: { player: "attacker" } };
-    const output = renderEventLine(event);
-    expect(output).toContain("SetupAttack");
+describe('renderState', () => {
+  it('shows turn player when present', () => {
+    const state: State = { turnPlayer: 'player1' };
+    const result = renderState(state);
+    expect(result).toContain('Turn Player: player1');
   });
 
-  it("includes log notes if provided", () => {
-    const event: GameEvent = { id: "RollToHit", params: {} };
-    const notes = ["roll: 4d6 -> [2, 6, 4, 1] at $.currentAttack.hitRolls"];
-    const output = renderEventLine(event, notes);
-    expect(output).toContain("4d6");
-    expect(output).toContain("[2, 6, 4, 1]");
+  it('shows player CP values', () => {
+    const state: State = {
+      players: {
+        player1: { cp: 3 },
+        player2: { cp: 1 },
+      },
+    };
+    const result = renderState(state);
+    expect(result).toContain('player1 CP: 3');
+    expect(result).toContain('player2 CP: 1');
+  });
+
+  it('shows unit names and statuses', () => {
+    const state: State = {
+      players: {
+        player1: {
+          cp: 0,
+          units: {
+            squad1: { name: 'Intercessors', battleshocked: true },
+          },
+        },
+      },
+    };
+    const result = renderState(state);
+    expect(result).toContain('player1/squad1: Intercessors [BATTLESHOCKED]');
+  });
+
+  it('shows active flags', () => {
+    const state: State = {
+      flags: { 'command-phase': true, 'shooting-phase': false },
+    };
+    const result = renderState(state);
+    expect(result).toContain('Active flags: command-phase');
+    expect(result).not.toContain('shooting-phase');
+  });
+
+  it('handles empty state gracefully', () => {
+    const result = renderState({});
+    expect(result).toContain('State Summary');
+  });
+});
+
+describe('renderLog', () => {
+  it('shows recent entries', () => {
+    const log: LogEntry[] = [
+      { type: 'rule', ruleId: 'r1', message: 'applied', timestamp: 1 },
+      { type: 'event', message: 'phase started', timestamp: 2 },
+    ];
+    const result = renderLog(log);
+    expect(result).toContain('[rule] r1: applied');
+    expect(result).toContain('[event] phase started');
+  });
+
+  it('limits to requested count', () => {
+    const log: LogEntry[] = Array.from({ length: 20 }, (_, i) => ({
+      type: 'rule',
+      ruleId: `r${i}`,
+      message: `msg${i}`,
+      timestamp: i,
+    }));
+    const result = renderLog(log, 3);
+    expect(result).toContain('r17');
+    expect(result).toContain('r18');
+    expect(result).toContain('r19');
+    expect(result).not.toContain('r16');
+  });
+
+  it('returns placeholder for empty log', () => {
+    const result = renderLog([]);
+    expect(result).toContain('no log entries');
   });
 });
