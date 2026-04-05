@@ -1,0 +1,14 @@
+game:
+  - startOfGame
+  - round:
+      repeat: 3
+  - endOfGame
+
+round:
+  - event
+
+startOfGame:
+  - event
+
+endOfGame:
+  - event

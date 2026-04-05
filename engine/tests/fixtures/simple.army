@@ -1,0 +1,8 @@
+include:
+  - template.rules
+
+units:
+  - template: testUnit
+    bind: { owner: player1, id: unit_1 }
+  - template: testUnit
+    bind: { owner: player1, id: unit_2 }

@@ -1,0 +1,21 @@
+objects:
+  unit: "$.players.*.units"
+
+selectors:
+  turnPlayer_units:
+    object: unit
+    where:
+      pathEquals: { path: "$entity.owner", value: { path: "$.turnPlayer" } }
+
+game:
+  - event
+
+CORE.Test:
+  when:
+    all:
+      - is: game
+      - selector: { id: turnPlayer_units }
+  effect:
+    - set: "$.tested"
+      value: true
+  label: "Test selector"

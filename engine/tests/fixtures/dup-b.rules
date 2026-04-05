@@ -1,0 +1,7 @@
+SHARED.Rule:
+  when:
+    on: game
+  effect:
+    - set: "$.y"
+      value: true
+  label: "Duplicate"

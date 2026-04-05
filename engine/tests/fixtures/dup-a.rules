@@ -1,0 +1,13 @@
+include:
+  - dup-b.rules
+
+SHARED.Rule:
+  when:
+    on: game
+  effect:
+    - set: "$.x"
+      value: true
+  label: "First"
+
+game:
+  - event

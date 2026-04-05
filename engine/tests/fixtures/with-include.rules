@@ -1,0 +1,9 @@
+include:
+  - included.rules
+
+game:
+  - startOfGame
+  - endOfGame
+
+endOfGame:
+  - event

@@ -1,0 +1,13 @@
+startOfGame:
+  - event
+
+game:
+  - startOfGame
+
+CORE.TestRule:
+  when:
+    on: startOfGame
+  effect:
+    - set: "$.testFlag"
+      value: true
+  label: "Test rule"

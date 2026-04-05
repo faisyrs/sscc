@@ -1,0 +1,10 @@
+startOfGame:
+  - event
+
+INCLUDED.Rule:
+  when:
+    on: startOfGame
+  effect:
+    - set: "$.included"
+      value: true
+  label: "Included rule"
