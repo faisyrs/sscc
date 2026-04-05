@@ -5,3 +5,6 @@ export * from './loader.js';
 export * from './sequencer.js';
 export * from './conditions.js';
 export * from './effects.js';
+export * from './derived.js';
+export * from './rule-loop.js';
+export * from './engine.js';

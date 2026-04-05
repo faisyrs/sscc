@@ -78,6 +78,16 @@ export class Sequencer {
     this.pushSequence(name);
   }
 
+  /** Get the steps for a named sequence (for inline sub-sequence processing). */
+  getSequenceSteps(name: string): SequenceStep[] | undefined {
+    return this.sequences.get(name);
+  }
+
+  /** Get the underlying sequences map. */
+  getSequences(): SequenceMap {
+    return this.sequences;
+  }
+
   private pushSequence(name: string): void {
     const steps = this.sequences.get(name);
     if (!steps) throw new Error(`Unknown sequence: "${name}"`);
