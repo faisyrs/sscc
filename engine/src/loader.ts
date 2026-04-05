@@ -2,6 +2,9 @@ import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import yaml from 'js-yaml';
 import { setPath } from './state.js';
+// Re-export so existing consumers (tests, etc.) can still import from loader
+export { extractEventRefs } from './conditions.js';
+import { extractEventRefs } from './conditions.js';
 import type {
   Condition,
   DerivedStateDef,
@@ -130,26 +133,7 @@ function findPlayerChoice(cond: Condition): string | undefined {
 }
 
 // ---------------------------------------------------------------------------
-// Condition event extraction (for rule indexing)
-// ---------------------------------------------------------------------------
-
-export function extractEventRefs(condition: Condition): { on: string[]; is: string[] } {
-  const ons: string[] = [];
-  const iss: string[] = [];
-  walkCondition(condition, ons, iss);
-  return { on: ons, is: iss };
-}
-
-function walkCondition(cond: Condition, ons: string[], iss: string[]): void {
-  if ('on' in cond) ons.push((cond as { on: string }).on);
-  if ('is' in cond) iss.push((cond as { is: string }).is);
-  if ('all' in cond) (cond as { all: Condition[] }).all.forEach(c => walkCondition(c, ons, iss));
-  if ('any' in cond) (cond as { any: Condition[] }).any.forEach(c => walkCondition(c, ons, iss));
-  if ('not' in cond) walkCondition((cond as { not: Condition }).not, ons, iss);
-}
-
-// ---------------------------------------------------------------------------
-// Rule indexing
+// Rule indexing (extractEventRefs imported from conditions.ts)
 // ---------------------------------------------------------------------------
 
 export function indexRules(rules: Rule[]): Map<string, Rule[]> {
