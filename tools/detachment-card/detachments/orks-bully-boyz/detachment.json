@@ -10,9 +10,9 @@
     "reference": "Warhammer app screenshots: Bully Boyz detachment page (9:16) and Stratagems list (7:52, two screens)",
     "edition": "11th",
     "source_version": "user-supplied screenshots (capture date not independently established)",
-    "last_verified": null,
-    "verified_against_source": false,
-    "verification_note": "Transcribed from the screenshots; not yet checked by the user. Bold terms in keywords follow the app's bold text. The app shows the upgrade as 'Or: ... +1CP' and the cost as '1CP/2CP'."
+    "last_verified": "2026-11-07",
+    "verified_against_source": true,
+    "verification_note": "Transcribed from the screenshots and confirmed by the user on 2026-11-07. Green headers mean either player's turn (confirmed). Bold terms in keywords follow the app's bold text. The app shows the upgrade as 'Or: ... +1CP' and the cost as '1CP/2CP'."
   },
   "keywords": [
     "MEGANOBZ/NOBZ",

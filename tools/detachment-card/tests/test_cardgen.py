@@ -39,7 +39,7 @@ class SourceValidation(unittest.TestCase):
     def test_loads(self):
         d = model.load(SOURCE)
         self.assertEqual(d.detachment_points, 1)
-        self.assertIn("within 3”", next(s for s in d.stratagems if s.id == "delicious-eating-squigs").effect)
+        self.assertIn("within 3\"", next(s for s in d.stratagems if s.id == "delicious-eating-squigs").effect)
 
     def test_phase_order_with_stable_ties(self):
         d = model.load(SOURCE)

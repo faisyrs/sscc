@@ -10,9 +10,9 @@
     "reference": "Warhammer app screenshots: Wreckas detachment page (7:40) and Stratagems list (7:53 and 7:40, two screens each)",
     "edition": "11th",
     "source_version": "user-supplied screenshots (capture date not independently established)",
-    "last_verified": null,
-    "verified_against_source": false,
-    "verification_note": "Transcribed from the screenshots; not yet checked by the user. The two 7:40 stratagem screens match the earlier 7:53 transcription word for word. In Grab It, the app underlines 'not'; the card cannot show underlining."
+    "last_verified": "2026-11-07",
+    "verified_against_source": true,
+    "verification_note": "Transcribed from the screenshots and confirmed by the user on 2026-11-07. Green headers mean either player's turn (confirmed). The two 7:40 stratagem screens match the earlier 7:53 transcription word for word. In Grab It, the app underlines 'not'; the card cannot show underlining."
   },
   "keywords": [
     "FLASH GITZ/TANKBUSTAS",
