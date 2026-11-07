@@ -112,13 +112,16 @@ def hazard(w, h, seed, px_pitch, colors=((236, 190, 28), (24, 22, 20))) -> Image
     return _rgb(arr)
 
 
-def masked(im: Image.Image, polys_px, ss=4) -> Image.Image:
-    """Give im an antialiased alpha mask made of the given polygons (pixel coordinates)."""
+def masked(im: Image.Image, polys_px, ss=4, holes_px=()) -> Image.Image:
+    """Give im an antialiased alpha mask made of the given polygons (pixel
+    coordinates), with the holes_px polygons cut out."""
     w, h = im.size
     mask = Image.new("L", (w * ss, h * ss), 0)
     d = ImageDraw.Draw(mask)
     for poly in polys_px:
         d.polygon([(x * ss, y * ss) for x, y in poly], fill=255)
+    for poly in holes_px:
+        d.polygon([(x * ss, y * ss) for x, y in poly], fill=0)
     out = im.convert("RGBA")
     out.putalpha(mask.resize((w, h), Image.Resampling.LANCZOS))
     return out

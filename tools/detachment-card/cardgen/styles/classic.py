@@ -97,7 +97,7 @@ def _setup(scene: Scene, d: Detachment, size: Size):
     kw = d.keywords
 
     art_w = cw * 0.37
-    scene.add("graphics", Picture(cx, cy, art_w, ch, d.hero_art))
+    scene.add("graphics", Picture(cx, cy, art_w, ch, d.hero_art or d.background_art))
     scene.add("borders", Rect(cx, cy, art_w, ch, stroke=THEME["parchment_edge"], sw=0.6))
 
     px, pw = cx + art_w + 2.0, cw - art_w - 2.0
@@ -131,7 +131,7 @@ def _setup(scene: Scene, d: Detachment, size: Size):
     body_top = row2 + 3.0
     body_h = iy + ih - pad + 0.8 - body_top
     block = "setup_text" if d.setup_text else "rule_text"
-    fit = tx.fit_block([tx.tokenize(d.setup_text or d.in_play_text, kw)], inner_w, body_h, 2.8, MIN_BODY, block)
+    fit = tx.fit_block(content.paragraphs(d.setup_text or d.in_play_text, kw), inner_w, body_h, 2.8, MIN_BODY, block)
     _text_lines(scene, px + pad, body_top, fit, THEME["ink"], block)
 
 
@@ -152,7 +152,7 @@ def _in_play(scene: Scene, d: Detachment, size: Size):
     _single(scene, tab[0] + 3, cy + strip_h / 2, name, nsize, THEME["ink"], "start", "rule_name")
     rx_ = tab[0] + tab_w + 2.5
     rule_w = cx + cw - 2.5 - rx_
-    fit = tx.fit_block([tx.tokenize(d.in_play_text, kw)], rule_w, strip_h - 2.4, 2.4, MIN_BODY, "in_play_text")
+    fit = tx.fit_block(content.paragraphs(d.in_play_text, kw), rule_w, strip_h - 2.4, 2.4, MIN_BODY, "in_play_text")
     top = cy + (strip_h - tx.block_height(len(fit.lines), fit.size)) / 2
     _text_lines(scene, rx_, top, fit, THEME["ink"], "in_play_text")
 

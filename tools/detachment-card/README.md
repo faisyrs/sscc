@@ -66,7 +66,7 @@ Copy `detachments/orks-kult-of-speed/` and edit `detachment.json`:
 - `detachment_rule.parts[]`: each part has `display_context` `setup` (setup side) or `in_play` (top strip of the in-play side).
 - `detachment_rule.setup_headline`: the one-line summary on the setup side.
 - `stratagems[]`: `phase` is one of command, movement, shooting, charge, fight, any, or a list such as `["shooting", "fight"]`, which is sorted by its first phase. `turn` is one of your, opponent, either. Panels are sorted by phase, and stratagems in the same phase keep their file order. Any number of stratagems is laid out; the build fails if they don't fit.
-- `effect`: separate paragraphs with `\n`. Start a bullet paragraph with `• `.
+- `effect` and rule `parts[].text`: separate paragraphs with `\n`. Start a bullet paragraph with `• `.
 - `upgrade` (optional): `{ "extra_cp": 1, "text": "..." }` for the app's "Or: ... +1CP". The badge then reads `1/2 CP` and the body ends with `OR (+1CP): ...`.
 - `detachment_rule.parts[]` with `display_context: "setup"` is optional. Without one, the setup side shows the rule's full text.
 - Art with a transparent background is detected automatically. It is trimmed to its visible edges, fitted whole into its slot, and drawn without a frame.
@@ -74,6 +74,8 @@ Copy `detachments/orks-kult-of-speed/` and edit `detachment.json`:
 - A source missing a required field, such as `orks-wreckas` until its detachment page is transcribed, fails the build with the field's JSON path.
 - `keywords[]`: exact phrases drawn in bold wherever they appear. Keywords in square brackets, such as `[ASSAULT]`, are weapon abilities; grunge draws them in red.
 - `faction_icon` (optional): shown at the top right of the grunge setup side. Without it, the faction plate takes the space.
+- `background_art`: a full-card picture behind the grunge setup side, with the panels laid over it. Use about 4:1, ideally 2400 × 600 px or larger. The main figure should be in the middle third, which stays uncovered. Classic uses it as its side picture. You can give `hero_art` instead, for the older layout with the picture beside the panels.
+- Keys starting with `_` (such as `_alternative`, a second art choice) are notes and are ignored by the generator.
 - `hero_art` and `stratagems[].art`: `{ "file": "art/x.png", "crop": [left, top, right, bottom] }`. The crop is in fractions of the image and is optional. The art is then cover-fitted, centred, to its slot.
 
 In the grunge in-play strip, each `in_play` part gets its own column. The

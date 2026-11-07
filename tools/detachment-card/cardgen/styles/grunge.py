@@ -11,7 +11,7 @@ import math
 import random
 from dataclasses import dataclass
 
-from .. import content
+from .. import artfit, content
 from .. import text as tx
 from .. import textures as tex
 from ..geometry import INCH, NOTCH_BASE, NOTCH_DEPTH, SIZES, Size
@@ -80,12 +80,13 @@ def silhouette(size: Size, c: float):
     return tuple(top + bottom + [(c, H), (0.0, H - c), (0.0, c)])
 
 
-def _bitmap(key, x, y, w, h, polys, gen):
-    """A texture generated at print resolution and masked to the given polygons (in mm)."""
+def _bitmap(key, x, y, w, h, polys, gen, holes=()):
+    """A texture generated at print resolution and masked to the given polygons (in mm), minus any holes."""
 
     def make(wp, hp):
         sx, sy = wp / w, hp / h
-        return tex.masked(gen(wp, hp), [[((px - x) * sx, (py - y) * sy) for px, py in poly] for poly in polys])
+        to_px = lambda polys_: [[((px - x) * sx, (py - y) * sy) for px, py in poly] for poly in polys_]
+        return tex.masked(gen(wp, hp), to_px(polys), holes_px=to_px(holes))
 
     return Bitmap(x, y, w, h, key, make)
 
@@ -98,6 +99,9 @@ class Kit:
 
     def __init__(self, scene: Scene, d: Detachment, size: Size):
         self.s, self.d, self.size = scene, d, size
+        # Where panel surfaces go. Over background art they move to the borders
+        # layer, so the background layer holds only the art.
+        self.surface = "background"
 
     def seed(self, key):
         return tex.seed_of(self.d.id, self.size.name, key)
@@ -112,7 +116,7 @@ class Kit:
     def panel(self, key, x, y, w, h, c=1.6, rivets=True):
         pts = chamfer(x, y, w, h, c)
         seed = self.seed(key)
-        self.s.add("background", _bitmap(f"{self.d.id}/{key}", x, y, w, h, [pts], lambda wp, hp: tex.parchment(wp, hp, seed)))
+        self.s.add(self.surface, _bitmap(f"{self.d.id}/{key}", x, y, w, h, [pts], lambda wp, hp: tex.parchment(wp, hp, seed)))
         self.frame(pts)
         self.s.add("borders", Poly(chamfer(x + 0.65, y + 0.65, w - 1.3, h - 1.3, c * 0.7), stroke=C["steel_hi"], sw=0.2, opacity=0.7))
         if rivets:
@@ -193,14 +197,28 @@ def _metrics(size: Size):
     return end, band, cx, cy, size.width - 2 * cx, size.height - 2 * cy
 
 
-def _chrome(k: Kit):
+def _chrome(k: Kit, side: str):
     s, d, size = k.s, k.d, k.size
     W, H = size.width, size.height
     end, band, *_ = _metrics(size)
     c = 2.2 if size.notched else 1.6
     sil = silhouette(size, c)
     seed = k.seed("plate")
-    s.add("background", _bitmap(f"{d.id}/{size.name}/plate", 0, 0, W, H, [sil], lambda wp, hp: tex.metal(wp, hp, seed)))
+    if side == "setup" and d.background_art:
+        # The art fills the whole card on the background layer. The metal shows only as a
+        # frame around it, on the borders layer.
+        art = d.background_art
+        s.add(
+            "background",
+            _bitmap(f"{d.id}/{size.name}/background-art", 0, 0, W, H, [sil],
+                    lambda wp, hp: artfit.fit(art.path, art.crop, art.transparent, wp, hp)),
+        )
+        window = ((end, band), (W - end, band), (W - end, H - band), (end, H - band))
+        s.add("borders", _bitmap(f"{d.id}/{size.name}/frame", 0, 0, W, H, [sil], lambda wp, hp: tex.metal(wp, hp, seed), holes=[window]))
+        s.add("borders", Poly(window, stroke=C["steel_edge"], sw=0.5))
+        k.surface = "borders"
+    else:
+        s.add("background", _bitmap(f"{d.id}/{size.name}/plate", 0, 0, W, H, [sil], lambda wp, hp: tex.metal(wp, hp, seed)))
     pitch = 3.2
     for name, x0 in (("left", 0.0), ("right", W - end)):
         if name == "left":
@@ -305,10 +323,13 @@ def _rule_name_block(k: Kit, x, y, w, h, tab_h):
 
 
 def _centred_text(k: Kit, x, top, w, bottom, text_, block):
+    """Text centred in a box. Text with several paragraphs, such as a bulleted
+    list, is left-aligned instead, so the bullets line up."""
     box_w, box_h = w - 6, bottom - top
-    fit = tx.fit_block([tx.tokenize(text_, k.d.keywords)], box_w, box_h, 4.4, MIN_BODY, block, BODY, BODY_LEADING)
+    paras = content.paragraphs(text_, k.d.keywords)
+    fit = tx.fit_block(paras, box_w, box_h, 4.4, MIN_BODY, block, BODY, BODY_LEADING)
     used = tx.block_height(len(fit.lines), fit.size, BODY, BODY_LEADING)
-    k.block(x + 3, top + (box_h - used) / 2, fit, block, "middle", width=box_w)
+    k.block(x + 3, top + (box_h - used) / 2, fit, block, "middle" if len(paras) == 1 else "start", width=box_w)
 
 
 def _rule_and_setup_panels(k: Kit, rx, by, rw, bh, tab_h, gap):
@@ -336,6 +357,73 @@ def _rule_panel_wide(k: Kit, rx, by, rw, bh, tab_h):
     dx = rx + name_w
     k.s.add("borders", Stroke(dx, by + tab_h * 0.9, dx, by + bh - 2.0, C["steel_edge"], 0.4))
     _centred_text(k, dx, by + tab_h * 0.75, rw - name_w, by + bh - 1.8, k.d.in_play_text, "rule_text")
+
+
+def _setup_over_background(k: Kit):
+    """Setup side over full-card art. The title and faction plates make a left
+    column and the rule panels a right column. The middle stays open, because
+    that's where the art's main figure usually is."""
+    d = k.d
+    _, _, cx, cy, cw, ch = _metrics(k.size)
+    gap = 1.4
+    col = cw * 0.32
+
+    # Left column: title plate, then the faction plate (and icon, if any).
+    th = ch * 0.5
+    k.plate("title", cx, cy, col, th, C["red"], c=1.2, chip=0.16, sw=0.6)
+    for px_ in (cx + 1.3, cx + col - 1.3):
+        for py_ in (cy + 1.3, cy + th - 1.3):
+            k.rivet(px_, py_, 0.42)
+    title = tx.plain(d.name.upper())
+    tsize = tx.fit_line(title, col - 6, th * 0.62, 3.0, "name", DISPLAY)
+    k.label(
+        cx + col / 2, cy + th / 2, title, tsize, C["title_text"], "middle", "name", DISPLAY,
+        outline=C["title_outline"], outline_w=0.55, shadow=C["title_shadow"], shadow_dx=0.4, shadow_dy=0.45,
+    )
+    tw_ = tx.line_width(title, tsize, DISPLAY)
+    cap = tx.cap_height(DISPLAY["regular"]) * tsize
+    k.scuff("title", cx + col / 2 - tw_ / 2, cy + th / 2 - cap / 2, cx + col / 2 + tw_ / 2, cy + th / 2 + cap / 2, _hex(C["red"]))
+
+    iy = cy + th + gap
+    ih = cy + ch - iy
+    icon_w = ih if d.faction_icon else 0.0
+    iw = col - icon_w - (gap if icon_w else 0)
+    k.plate("info", cx, iy, iw, ih, C["light_metal"], c=1.2, chip=0.08, sw=0.6)
+    for px_ in (cx + 1.3, cx + iw - 1.3):
+        for py_ in (iy + 1.3, iy + ih - 1.3):
+            k.rivet(px_, py_, 0.38)
+    l1 = tx.plain(f"{d.faction.upper()}  •  DETACHMENT ({d.detachment_points} DP)")
+    l2 = tx.plain(f"FORCE DISPOSITION: {d.disposition.upper()}")
+    s1 = tx.fit_line(l1, iw - 5, ih * 0.3, MIN_LABEL, "faction_points", LABEL)
+    s2 = tx.fit_line(l2, iw - 5, s1 * 0.8, MIN_LABEL, "disposition", LABEL)
+    k.label(cx + iw / 2, iy + ih * 0.36, l1, s1, C["ink"], "middle", "faction_points")
+    k.label(cx + iw / 2, iy + ih * 0.70, l2, s2, C["ink"], "middle", "disposition")
+    if d.faction_icon:
+        k.picture(d.faction_icon, cx + iw + gap, iy, icon_w, ih)
+
+    # Right column: the rule's name, then the setup-only rule if there is one.
+    rx = cx + cw - col
+    tab_h = 4.0
+    top = cy + tab_h * 0.32
+    if d.setup_text:
+        nh = (ch - tab_h * 0.32) * 0.44
+        k.panel("rule", rx, top, col, nh)
+        _tab(k, "rule-tab", rx + col / 2, top, "DETACHMENT RULE", tab_h, col * 0.62)
+        _rule_name_block(k, rx, top, col, nh, tab_h)
+        sy = top + nh + gap + tab_h * 0.32
+        sh = cy + ch - sy
+        k.panel("setup", rx, sy, col, sh)
+        _tab(k, "setup-tab", rx + col * 0.36, sy, "SETUP ONLY", tab_h, col * 0.45)
+        k.checker(rx + col * 0.36 + col * 0.225 + 1.5, sy - tab_h * 0.32, col * 0.28, tab_h * 0.64)
+        _centred_text(k, rx, sy + tab_h * 0.75, col, sy + sh - 1.8, d.setup_text, "setup_text")
+    else:
+        ph = cy + ch - top
+        k.panel("rule", rx, top, col, ph)
+        _tab(k, "rule-tab", rx + col / 2, top, "DETACHMENT RULE", tab_h, col * 0.62)
+        name_h = ph * 0.46
+        _rule_name_block(k, rx, top, col, name_h, tab_h)
+        k.s.add("borders", Stroke(rx + 3, top + name_h + 0.4, rx + col - 3, top + name_h + 0.4, C["steel_edge"], 0.35))
+        _centred_text(k, rx, top + name_h + 1.2, col, top + ph - 1.8, d.in_play_text, "rule_text")
 
 
 def _tab(k: Kit, key, x_mid, y_edge, label, h, w):
@@ -412,7 +500,7 @@ def _in_play(k: Kit):
     k.plate("strip-name", px_, cy + (sh - ph_) / 2, pw_, ph_, C["yellow"], c=1.0, sw=0.5)
     k.label(px_ + pw_ / 2, cy + sh / 2, name, nsize, C["ink"], "middle", "rule_name", DISPLAY)
 
-    parts = [[tx.tokenize(p, kw)] for p in d.in_play_parts]
+    parts = [content.paragraphs(p, kw) for p in d.in_play_parts]
     col_x0, col_x1 = px_ + pw_ + 3.0, cx + cw - 3.0
     col_gap = 3.0
     avail = col_x1 - col_x0 - col_gap * (len(parts) - 1)
@@ -543,6 +631,11 @@ def safe_area(size: Size):
 def build(d: Detachment, size: Size, side: str) -> Scene:
     scene = Scene(size.width, size.height)
     k = Kit(scene, d, size)
-    _chrome(k)
-    (_setup if side == "setup" else _in_play)(k)
+    _chrome(k, side)
+    if side == "in_play":
+        _in_play(k)
+    elif d.background_art:
+        _setup_over_background(k)
+    else:
+        _setup(k)
     return scene

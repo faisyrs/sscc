@@ -3,15 +3,16 @@
   "id": "orks-wreckas",
   "faction": "Orks",
   "name": "Wreckas",
-  "_missing": "No screenshot of the Wreckas detachment page yet. detachment_points, disposition and detachment_rule are left out on purpose, so the build stops with an error instead of printing a guess.",
+  "detachment_points": 1,
+  "disposition": "Priority Assets",
   "source": {
     "type": "official_app_screenshots_supplied_by_user",
-    "reference": "Warhammer app screenshots: Wreckas Stratagems list (7:53, two screens). Detachment page not yet supplied.",
+    "reference": "Warhammer app screenshots: Wreckas detachment page (7:40) and Stratagems list (7:53 and 7:40, two screens each)",
     "edition": "11th",
     "source_version": "user-supplied screenshots (capture date not independently established)",
     "last_verified": null,
     "verified_against_source": false,
-    "verification_note": "Stratagems transcribed from the screenshots; not yet checked by the user. In Grab It, the app underlines 'not'; the card cannot show underlining."
+    "verification_note": "Transcribed from the screenshots; not yet checked by the user. The two 7:40 stratagem screens match the earlier 7:53 transcription word for word. In Grab It, the app underlines 'not'; the card cannot show underlining."
   },
   "keywords": [
     "FLASH GITZ/TANKBUSTAS",
@@ -26,7 +27,17 @@
     "objective",
     "eligible to declare a charge"
   ],
-  "hero_art": { "file": "art/hero.png" },
+  "background_art": { "file": "art/background.png" },
+  "detachment_rule": {
+    "id": "wreckin-and-lootin",
+    "name": "Wreckin’ and Lootin’",
+    "parts": [
+      {
+        "display_context": "in_play",
+        "text": "In your Shooting phase, when a friendly BREAKA BOYZ/FLASH GITZ/TANKBUSTAS unit is selected to shoot, if any of the following apply, that unit’s attacks can re-roll hit rolls of 1:\n• That unit is within range of an objective.\n• The target of that attack is within range of an objective."
+      }
+    ]
+  },
   "stratagems": [
     {
       "id": "gun-crazy-show-offs",
@@ -37,7 +48,7 @@
       "when": "Your opponent’s Shooting phase, when an enemy unit has shot.",
       "target": "One friendly FLASH GITZ/TANKBUSTAS unit hit by those attacks.",
       "effect": "Your unit shoots using normal shooting, but while doing so your unit can only target that enemy unit.",
-      "art": { "file": "art/gun-crazy-show-offs.png" }
+      "art": { "file": "art/gun-crazy-show-offs-a.png", "_alternative": "art/gun-crazy-show-offs-b.png" }
     },
     {
       "id": "drive-by-bustin",
@@ -48,7 +59,7 @@
       "when": "Your Shooting phase, when a friendly ORKS TRANSPORT unit is selected to shoot.",
       "target": "That ORKS TRANSPORT unit.",
       "effect": "Your unit’s ranged attacks with weapons selected for the Firing Deck ability have +1 to hit rolls.",
-      "art": { "file": "art/drive-by-bustin.png" }
+      "art": { "file": "art/drive-by-bustin-a.png", "_alternative": "art/drive-by-bustin-b.png" }
     },
     {
       "id": "grab-it",
@@ -59,7 +70,7 @@
       "when": "Your Shooting phase, when a friendly unengaged BREAKA BOYZ/FLASH GITZ/TANKBUSTAS unit has shot.",
       "target": "That BREAKA BOYZ/FLASH GITZ/TANKBUSTAS unit.",
       "effect": "• Your unit can make a normal move of up to 6\", and must end that move within range of an objective.\n• Your unit is not eligible to declare a charge until the end of the turn.",
-      "art": { "file": "art/grab-it.png" }
+      "art": { "file": "art/grab-it-a.png", "_alternative": "art/grab-it-b.png" }
     }
   ]
 }

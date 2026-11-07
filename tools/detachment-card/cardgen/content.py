@@ -35,3 +35,8 @@ def phase_label(s: Stratagem) -> str:
     names = " OR ".join(PHASE_NAMES[p] for p in s.phases)
     label = "ANY PHASE" if s.phases == ("any",) else f"{names} PHASE"
     return f"OPPONENT’S {label}" if s.turn == "opponent" else label
+
+
+def paragraphs(text: str, keywords) -> list[tx.Line]:
+    """A rule's text as wrap-ready paragraphs: one per line of the source, so bullets start new lines."""
+    return [tx.tokenize(p.strip(), keywords) for p in text.split("\n") if p.strip()]

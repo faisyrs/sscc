@@ -26,7 +26,7 @@
     "S",
     "T"
   ],
-  "hero_art": { "file": "art/hero.png" },
+  "background_art": { "file": "art/background.png" },
   "detachment_rule": {
     "id": "displays-of-savagery",
     "name": "Displays of Savagery",
@@ -48,7 +48,7 @@
       "target": "That MEGANOBZ/NOBZ unit.",
       "effect": "Ranged attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls.",
       "upgrade": { "extra_cp": 1, "text": "Ranged attacks that target your unit have -1 to wound rolls." },
-      "art": { "file": "art/hulking-brutes.png" }
+      "art": { "file": "art/hulking-brutes-a.png", "_alternative": "art/hulking-brutes-b.png" }
     },
     {
       "id": "too-arrogant-to-die",
@@ -59,7 +59,7 @@
       "when": "Fight phase, when an enemy unit targets a friendly MEGANOBZ/NOBZ unit.",
       "target": "That MEGANOBZ/NOBZ unit.",
       "effect": "When a model in your unit is destroyed, if your unit has not been selected to fight this phase, roll one D6, with +1 to that roll if your unit is riled up:\n• On a 4+, do not remove that model from the battlefield. When your unit has fought, or at the end of the phase (whichever comes first), that model is removed from the battlefield.",
-      "art": { "file": "art/too-arrogant-to-die.png" }
+      "art": { "file": "art/too-arrogant-to-die-a.png", "_alternative": "art/too-arrogant-to-die-b.png" }
     },
     {
       "id": "armed-to-da-teef",
@@ -70,7 +70,7 @@
       "when": "Your Shooting phase or the Fight phase, when a friendly MEGANOBZ/NOBZ unit is selected to attack.",
       "target": "That MEGANOBZ/NOBZ unit.",
       "effect": "Your unit’s attacks can:\n• Re-roll hit rolls of 1.\n• If your unit is riled up, re-roll hit rolls.",
-      "art": { "file": "art/armed-to-da-teef.png" }
+      "art": { "file": "art/armed-to-da-teef-a.png", "_alternative": "art/armed-to-da-teef-b.png" }
     }
   ]
 }

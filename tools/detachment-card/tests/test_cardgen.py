@@ -20,7 +20,7 @@ from cardgen import build, content, layout, model, render, text  # noqa: E402
 SOURCE = ROOT / "detachments/orks-kult-of-speed/detachment.json"
 BULLY = ROOT / "detachments/orks-bully-boyz/detachment.json"
 WRECKAS = ROOT / "detachments/orks-wreckas/detachment.json"
-COMPLETE = (SOURCE, BULLY)  # sources with everything a card needs
+COMPLETE = (SOURCE, BULLY, WRECKAS)
 
 
 def raw():
@@ -54,7 +54,8 @@ class SourceValidation(unittest.TestCase):
             "$.stratagems[0].cp": lambda d: d["stratagems"][0].update(cp="1"),
             "$.stratagems[1].id": lambda d: d["stratagems"][1].update(id=d["stratagems"][0]["id"]),
             "$.stratagems[0].art.file": lambda d: d["stratagems"][0]["art"].update(file="art/missing.png"),
-            "$.hero_art.crop": lambda d: d["hero_art"].update(crop=[0, 0, 1.5, 1]),
+            "$.background_art.crop": lambda d: d["background_art"].update(crop=[0, 0, 1.5, 1]),
+            "$.hero_art": lambda d: d.pop("background_art"),
             "$.detachment_rule.parts": lambda d: d["detachment_rule"].update(
                 parts=[p for p in d["detachment_rule"]["parts"] if p["display_context"] != "in_play"]
             ),
@@ -175,9 +176,18 @@ class Layout(unittest.TestCase):
 
     def test_faction_icon_is_optional(self):
         data = raw()
-        data.pop("faction_icon")
-        sc = layout.build(parse(data), layout.SIZES["full"], "setup", "grunge")
-        self.assertEqual(len([p for p in sc.layers["graphics"] if isinstance(p, layout.Picture)]), 1)
+        assert "faction_icon" not in data
+        icon = {"file": "art/dakka.png"}
+        with_icon = layout.build(parse({**data, "faction_icon": icon}), layout.SIZES["full"], "setup", "grunge")
+        without = layout.build(parse(data), layout.SIZES["full"], "setup", "grunge")
+        count = lambda sc: len([p for p in sc.layers["graphics"] if isinstance(p, layout.Picture)])
+        self.assertEqual(count(with_icon) - count(without), 1)
+
+    def test_background_art_fills_the_card_on_its_own_layer(self):
+        sc = layout.build(model.load(SOURCE), layout.SIZES["full"], "setup", "grunge")
+        bg = sc.layers["background"]
+        self.assertEqual(len(bg), 1)
+        self.assertEqual((bg[0].x, bg[0].y, bg[0].w, bg[0].h), (0, 0, sc.width, sc.height))
 
 
 class OtherDetachments(unittest.TestCase):
@@ -231,9 +241,18 @@ class OtherDetachments(unittest.TestCase):
         self.assertEqual(im.getpixel((0, 0))[3], 0)
 
     def test_incomplete_source_refuses_to_build(self):
+        data = json.loads(WRECKAS.read_text(encoding="utf-8"))
+        data.pop("detachment_rule")
         with self.assertRaises(model.SourceError) as cm:
-            model.load(WRECKAS)
+            model.parse(data, WRECKAS.parent)
         self.assertIn("$.detachment_rule", str(cm.exception))
+
+    def test_bulleted_rule_keeps_its_bullets_on_their_own_lines(self):
+        d = model.load(WRECKAS)
+        sc = layout.build(d, layout.SIZES["full"], "in_play", "grunge")
+        lines = [text.line_text(p.line) for p in sc.layers["text"] if isinstance(p, layout.Text) and p.block == "in_play_text"]
+        self.assertTrue(lines[-2].startswith("• That unit is within range"))
+        self.assertTrue(lines[-1].startswith("• The target of that attack"))
 
 
 class Outputs(unittest.TestCase):

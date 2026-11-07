@@ -70,11 +70,14 @@ class Detachment:
     setup_headline: str  # "" when the source gives none
     setup_text: str  # "" when the detachment has no setup-only rule
     in_play_text: str
-    hero_art: Art
+    hero_art: Art | None  # the picture on the setup side, beside the panels
     stratagems: tuple[Stratagem, ...]  # already in display order
     keywords: tuple[str, ...] = ()
     in_play_parts: tuple[str, ...] = ()
     faction_icon: Art | None = None
+    # A full-card picture behind the setup side (about 4:1, e.g. 2400 x 600 px).
+    # Grunge draws the panels over it; classic uses it as its hero picture.
+    background_art: Art | None = None
     source: dict = field(default_factory=dict)
     source_dir: Path = Path(".")
 
@@ -184,6 +187,8 @@ def parse(data: dict, base: Path) -> Detachment:
     if not isinstance(keywords, list) or not all(isinstance(k, str) and k.strip() for k in keywords):
         raise SourceError("$.keywords: expected a list of non-empty strings")
 
+    if "hero_art" not in data and "background_art" not in data:
+        raise SourceError("$.hero_art: required field is missing (or give background_art instead)")
     dp = _req(data, "detachment_points", int, w)
     if dp < 0:
         raise SourceError("$.detachment_points: must be >= 0")
@@ -198,7 +203,8 @@ def parse(data: dict, base: Path) -> Detachment:
         setup_headline=_req(rule, "setup_headline", str, "$.detachment_rule") if "setup_headline" in rule else "",
         setup_text=" ".join(texts["setup"]),
         in_play_text=" ".join(texts["in_play"]),
-        hero_art=_art(_req(data, "hero_art", dict, w), "$.hero_art", base),
+        hero_art=_art(data["hero_art"], "$.hero_art", base) if "hero_art" in data else None,
+        background_art=_art(data["background_art"], "$.background_art", base) if "background_art" in data else None,
         stratagems=tuple(display_order(strats)),
         keywords=tuple(keywords),
         in_play_parts=tuple(texts["in_play"]),
