@@ -94,7 +94,7 @@ columns are sized so they wrap to the same number of lines.
 - **Colours and geometry:** `cardgen/styles/grunge.py` and `cardgen/styles/classic.py`. Token sizes are in `cardgen/geometry.py`.
 - **Adding a style:** add a module under `cardgen/styles/` with `build(d, size, side)` and `safe_area(size)`, then register it in `cardgen/layout.py`.
 
-`hardware/token_2x8.scad` is the OpenSCAD model of the token itself. It is not part of the card build.
+`hardware/token_2x8.scad` is the OpenSCAD model of the token itself. It is not part of the card build. The sticker pocket is 46.8 × 199.2 mm and 1 mm deep, with a rim rounded to 0.5 mm (`recess`, `rim_r`). The decorative notches at each inch are 1 mm deep, which leaves a 1 mm wall between each notch and the pocket.
 
 `hardware/token_2x8_split.scad` is the same token split into two dovetailed pieces, for printers with a bed smaller than 203 mm. By default it splits at 5 in, giving a 5 in piece and a 3 in piece. Both fit on one 105.6 × 132 mm plate, so a 5.6 in (142 mm) bed works:
 

@@ -257,7 +257,7 @@ def _chrome(k: Kit, side: str):
     s.add("guides", Rect(cx, cy, cw, ch, stroke=C["guide"], sw=0.15, dash="0.5 0.5"))
     for i in range(1, 8):
         x = i * INCH - offset
-        s.add("guides", Stroke(x, 0, x, 1.7, C["guide"], 0.2), Stroke(x, H - 1.7, x, H, C["guide"], 0.2))
+        s.add("guides", Stroke(x, 0, x, NOTCH_DEPTH, C["guide"], 0.2), Stroke(x, H - NOTCH_DEPTH, x, H, C["guide"], 0.2))
 
 
 def _setup(k: Kit):

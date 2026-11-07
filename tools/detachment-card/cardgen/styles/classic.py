@@ -4,7 +4,7 @@ from __future__ import annotations
 import random
 from .. import content
 from .. import text as tx
-from ..geometry import INCH, SIZES, Size
+from ..geometry import INCH, NOTCH_DEPTH, SIZES, Size
 from ..model import Detachment
 from ..scene import Circle, Picture, Rect, Scene, Stroke, Text
 
@@ -82,7 +82,7 @@ def _chrome(scene: Scene, d: Detachment, size: Size):
     offset = (SIZES["full"].width - W) / 2  # the sticker is centred on the token
     for i in range(1, 8):
         x = i * INCH - offset
-        scene.add("guides", Stroke(x, 0, x, 1.7, THEME["guide"], 0.2), Stroke(x, H - 1.7, x, H, THEME["guide"], 0.2))
+        scene.add("guides", Stroke(x, 0, x, NOTCH_DEPTH, THEME["guide"], 0.2), Stroke(x, H - NOTCH_DEPTH, x, H, THEME["guide"], 0.2))
 
 
 def _panel(scene, x, y, w, h, fill, edge, sw, rx):

@@ -1,6 +1,6 @@
 // Measuring token, split in two pieces for printers with a small bed.
 // Same token as token_2x8.scad (2 x 8 in, 3 mm thick, 2 mm sticker inset,
-// 0.2 mm pocket, 1-inch notches), split at an inch station (5 in by default)
+// 1 mm pocket with a rounded rim, 1 mm deep notches at each inch), split at an inch station (5 in by default)
 // and joined with dovetails. Piece A is 50.8 x 132 mm including the
 // dovetails; piece B is 50.8 x 76.2 mm. Both fit side by side on a 142 mm
 // (5.6 in) bed: part = "plate".
@@ -25,8 +25,11 @@ double_sided = false;      // true adds a sticker pocket on the bottom face too
 clearance = 0.15;          // gap around each dovetail; raise it if the joint is too tight
 
 W = 50.8; L = 203.2; T = 3.0;
-inset = 2.0; recess = 0.2;
-notch_base = 1.6; notch_depth = 1.7; overcut = 0.5;
+inset = 2.0;               // border around the sticker; the pocket is 46.8 x 199.2 mm
+recess = 1.0;              // pocket depth
+rim_r = 0.5;               // radius of the rounded pocket rim (0 for a square edge)
+rim_steps = 8;             // facets in the rounded rim
+notch_base = 1.6; notch_depth = 1.0; overcut = 0.5;
 split = split_in * 25.4;
 
 // Dovetails: narrow at the seam, wide at the tip, so the halves can't pull apart.
@@ -40,12 +43,33 @@ module notch(x_edge, dir, y) {
                  [x_edge + dir * notch_depth, y]]);
 }
 
+// The sticker pocket, cut down from the top face (z = T). The floor is exactly
+// the sticker's size, with square corners for its square-cut corners. Over the
+// top rim_r mm the opening widens along a quarter circle, so the rim is rounded.
+module pocket() {
+    pw = W - 2 * inset; pl = L - 2 * inset;
+    translate([inset, inset, T - recess]) cube([pw, pl, recess + overcut]);
+    if (rim_r > 0)
+        for (i = [0 : rim_steps - 1]) {
+            z0 = T - rim_r + rim_r * i / rim_steps;
+            z1 = T - rim_r + rim_r * (i + 1) / rim_steps;
+            g0 = rim_r - sqrt(rim_r * rim_r - pow(z0 - T + rim_r, 2));
+            g1 = rim_r - sqrt(rim_r * rim_r - pow(z1 - T + rim_r, 2));
+            hull() {
+                translate([inset - g0, inset - g0, z0]) cube([pw + 2 * g0, pl + 2 * g0, 0.001]);
+                translate([inset - g1, inset - g1, z1]) cube([pw + 2 * g1, pl + 2 * g1, 0.001]);
+            }
+            if (i == rim_steps - 1)
+                translate([inset - g1, inset - g1, z1 - 0.001]) cube([pw + 2 * g1, pl + 2 * g1, overcut]);
+        }
+}
+
 module token() {
     difference() {
         cube([W, L, T]);
-        translate([inset, inset, T - recess]) cube([W - 2 * inset, L - 2 * inset, recess + overcut]);
-        if (double_sided)
-            translate([inset, inset, -overcut]) cube([W - 2 * inset, L - 2 * inset, recess + overcut]);
+        pocket();
+        if (double_sided)  // the same pocket, mirrored onto the bottom face
+            translate([0, 0, T]) mirror([0, 0, 1]) pocket();
         for (i = [1:7]) {
             translate([0, 0, -overcut]) notch(0, 1, i * 25.4);
             translate([0, 0, -overcut]) notch(W, -1, i * 25.4);
