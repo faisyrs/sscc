@@ -1,26 +1,33 @@
-// Measuring token, split in two halves for printers with a small bed.
+// Measuring token, split in two pieces for printers with a small bed.
 // Same token as token_2x8.scad (2 x 8 in, 3 mm thick, 2 mm sticker inset,
-// 0.2 mm pocket, 1-inch notches), split at the 4-inch station and joined
-// with dovetails. Each half is 50.8 x about 106.6 mm. Both halves fit
-// side by side on a 142 mm (5.6 in) bed: part = "plate".
+// 0.2 mm pocket, 1-inch notches), split at an inch station (5 in by default)
+// and joined with dovetails. Piece A is 50.8 x 132 mm including the
+// dovetails; piece B is 50.8 x 76.2 mm. Both fit side by side on a 142 mm
+// (5.6 in) bed: part = "plate".
+//
+// Two-layer token: print two of these, one for each card side, and glue them
+// back to back with one layer turned end over end. The seams then sit at
+// 5 in on one layer and 3 in on the other, so each seam is backed by a solid
+// part of the other layer. part = "laminated" shows the result.
 //
 // Export one STL per part:
 //   openscad -D 'part="a"'     -o token_half_a.stl token_2x8_split.scad
 //   openscad -D 'part="b"'     -o token_half_b.stl token_2x8_split.scad
 //   openscad -D 'part="plate"' -o token_plate.stl  token_2x8_split.scad
-// part = "assembled" shows the joined token, for checking only.
+// part = "assembled" and part = "laminated" are for checking only.
 //
 // Print flat, pocket side up. Push the halves together and glue the joint;
 // the sticker then covers the seam.
 
-part = "plate";            // "a", "b", "plate" or "assembled"
+part = "plate";            // "a", "b", "plate", "assembled" or "laminated"
+split_in = 5;              // the inch station to split at (1-7); 5 gives a 5 in and a 3 in piece
 double_sided = false;      // true adds a sticker pocket on the bottom face too
 clearance = 0.15;          // gap around each dovetail; raise it if the joint is too tight
 
 W = 50.8; L = 203.2; T = 3.0;
 inset = 2.0; recess = 0.2;
 notch_base = 1.6; notch_depth = 1.7; overcut = 0.5;
-split = L / 2;             // the 4-inch station
+split = split_in * 25.4;
 
 // Dovetails: narrow at the seam, wide at the tip, so the halves can't pull apart.
 tail_neck = 7; tail_tip = 10; tail_depth = 5;
@@ -79,8 +86,13 @@ module half_b() {
 if (part == "a") half_a();
 else if (part == "b") translate([0, -split, 0]) half_b();
 else if (part == "assembled") { half_a(); half_b(); }
+else if (part == "laminated") {
+    // Top layer as printed, on a bottom layer turned end over end (y -> L - y), pockets facing out.
+    translate([0, 0, T]) { half_a(); half_b(); }
+    translate([0, L, T]) rotate([180, 0, 0]) { half_a(); half_b(); }
+}
 else {
-    // Both halves on one plate, side by side, 4 mm apart, within a 106 x 107 mm area.
+    // Both pieces on one plate, side by side, 4 mm apart: 105.6 x 132 mm with the default 5 in split.
     half_a();
     translate([2 * W + 4, split + tail_depth, 0]) rotate([0, 0, 180]) translate([0, -split, 0]) half_b();
 }

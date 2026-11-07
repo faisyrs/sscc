@@ -96,12 +96,15 @@ columns are sized so they wrap to the same number of lines.
 
 `hardware/token_2x8.scad` is the OpenSCAD model of the token itself. It is not part of the card build.
 
-`hardware/token_2x8_split.scad` is the same token split at the 4-inch station into two dovetailed halves, for printers with a bed smaller than 203 mm. Both halves fit on one 106 × 107 mm plate, so a 5.6 in (142 mm) bed works:
+`hardware/token_2x8_split.scad` is the same token split into two dovetailed pieces, for printers with a bed smaller than 203 mm. By default it splits at 5 in, giving a 5 in piece and a 3 in piece. Both fit on one 105.6 × 132 mm plate, so a 5.6 in (142 mm) bed works:
 
 ```sh
-openscad -D 'part="plate"' -o token_plate.stl hardware/token_2x8_split.scad   # both halves on one plate
-openscad -D 'part="a"' -o token_half_a.stl hardware/token_2x8_split.scad      # or one half at a time
+openscad -D 'part="plate"' -o token_plate.stl hardware/token_2x8_split.scad   # both pieces on one plate
+openscad -D 'part="a"' -o token_piece_a.stl hardware/token_2x8_split.scad     # or one piece at a time
 ```
 
-- `clearance` (default 0.15 mm) sets the gap around each dovetail. Raise it if the halves are too tight to push together.
-- `double_sided=true` adds a sticker pocket on the bottom face too, so one token can carry both sides of a card.
+For a two-sided token, print two and glue them back to back, pockets facing out, with one layer turned end over end. The seams then fall at 5 in on one layer and 3 in on the other, so each seam is backed by solid material. The finished token is 6 mm thick. `part="laminated"` shows the result.
+
+- `split_in` (default 5) sets the inch station to split at.
+- `clearance` (default 0.15 mm) sets the gap around each dovetail. Raise it if the pieces are too tight to push together.
+- `double_sided=true` adds a sticker pocket on the bottom face too, for a single 3 mm layer carrying both stickers. You don't need it for the glued two-layer token.
