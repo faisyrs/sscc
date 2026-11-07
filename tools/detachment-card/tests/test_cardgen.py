@@ -230,11 +230,12 @@ class OtherDetachments(unittest.TestCase):
         self.assertEqual(by["armed-to-da-teef"].effect_paragraphs, ("Your unit’s attacks can:", "• Re-roll hit rolls of 1.", "• If your unit is riled up, re-roll hit rolls."))
         # Sorted by first phase; same-phase stratagems keep their source order.
         self.assertEqual([s.id for s in d.stratagems], ["hulking-brutes", "armed-to-da-teef", "too-arrogant-to-die"])
-        self.assertTrue(by["hulking-brutes"].art.transparent)
+        self.assertFalse(by["hulking-brutes"].art.transparent)
         self.assertFalse(model.load(SOURCE).stratagems[0].art.transparent)
 
     def test_transparent_art_keeps_its_transparency(self):
-        art = model.load(BULLY).stratagems[0].art
+        art = model._art({"file": "art/hulking-brutes-a.png"}, "$", BULLY.parent)
+        self.assertTrue(art.transparent)
         from io import BytesIO
         from PIL import Image
 
