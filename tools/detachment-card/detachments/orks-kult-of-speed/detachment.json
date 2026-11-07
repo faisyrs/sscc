@@ -1,0 +1,85 @@
+{
+  "schema_version": "2.0",
+  "id": "orks-kult-of-speed",
+  "faction": "Orks",
+  "name": "Kult of Speed",
+  "detachment_points": 1,
+  "disposition": "Reconnaissance",
+  "source": {
+    "type": "official_app_screenshots_supplied_by_user",
+    "reference": "Original Warhammer app screenshots; transcribed in v0.6 rules.json",
+    "edition": "11th",
+    "source_version": "user-supplied screenshots (capture date not independently established)",
+    "last_verified": "2026-11-05",
+    "verified_against_source": true,
+    "verification_note": "Compared with user-supplied Warhammer app screenshots 1000032781.png and 1000032765.png. Source wording retained, including bracketed keywords and 3-inch range."
+  },
+  "keywords": [
+    "WARBIKERS",
+    "BATTLELINE",
+    "SPEED FREEKS",
+    "RUKKATRUKK SQUIGBUGGIES",
+    "ORKS INFANTRY",
+    "[ASSAULT]",
+    "[SUSTAINED HITS 1]"
+  ],
+  "hero_art": { "file": "art/biker.png", "crop": [0.0, 0.06, 1.0, 1.0] },
+  "detachment_rule": {
+    "id": "adrenaline-junkies",
+    "name": "Adrenaline Junkies",
+    "setup_headline": "Warbikers have Battleline",
+    "parts": [
+      {
+        "display_context": "setup",
+        "text": "Friendly WARBIKERS units have BATTLELINE."
+      },
+      {
+        "display_context": "in_play",
+        "text": "When a friendly SPEED FREEKS unit is selected to make an Advance or Fall Back move,"
+      },
+      {
+        "display_context": "in_play",
+        "text": "that unit’s ranged attacks have [ASSAULT] until the end of the turn."
+      },
+      {
+        "display_context": "in_play",
+        "text": "That move does not prevent that unit from being eligible to declare a charge."
+      }
+    ]
+  },
+  "stratagems": [
+    {
+      "id": "dakkastorm",
+      "name": "Dakkastorm",
+      "cp": 1,
+      "phase": "shooting",
+      "turn": "your",
+      "when": "Your Shooting phase, when a friendly SPEED FREEKS unit is selected to shoot.",
+      "target": "That SPEED FREEKS unit.",
+      "effect": "Your unit’s ranged attacks have [SUSTAINED HITS 1].",
+      "art": { "file": "art/dakka.png" }
+    },
+    {
+      "id": "speediest-freeks",
+      "name": "Speediest Freeks",
+      "cp": 1,
+      "phase": "shooting",
+      "turn": "opponent",
+      "when": "Your opponent’s Shooting phase, when an enemy unit targets a friendly SPEED FREEKS unit.",
+      "target": "That SPEED FREEKS unit.",
+      "effect": "Ranged attacks that target your unit fail on an unmodified Hit roll of 1–3.",
+      "art": { "file": "art/speed.png" }
+    },
+    {
+      "id": "delicious-eating-squigs",
+      "name": "Delicious Eating Squigs",
+      "cp": 1,
+      "phase": "movement",
+      "turn": "your",
+      "when": "Your Movement phase.",
+      "target": "One friendly RUKKATRUKK SQUIGBUGGIES unit.",
+      "effect": "Select any number of friendly ORKS INFANTRY units within 3” of your unit. Each selected unit heals 3 wounds.",
+      "art": { "file": "art/squig.png" }
+    }
+  ]
+}
