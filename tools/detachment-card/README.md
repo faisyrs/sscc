@@ -95,3 +95,13 @@ columns are sized so they wrap to the same number of lines.
 - **Adding a style:** add a module under `cardgen/styles/` with `build(d, size, side)` and `safe_area(size)`, then register it in `cardgen/layout.py`.
 
 `hardware/token_2x8.scad` is the OpenSCAD model of the token itself. It is not part of the card build.
+
+`hardware/token_2x8_split.scad` is the same token split at the 4-inch station into two dovetailed halves, for printers with a bed smaller than 203 mm. Both halves fit on one 106 × 107 mm plate, so a 5.6 in (142 mm) bed works:
+
+```sh
+openscad -D 'part="plate"' -o token_plate.stl hardware/token_2x8_split.scad   # both halves on one plate
+openscad -D 'part="a"' -o token_half_a.stl hardware/token_2x8_split.scad      # or one half at a time
+```
+
+- `clearance` (default 0.15 mm) sets the gap around each dovetail. Raise it if the halves are too tight to push together.
+- `double_sided=true` adds a sticker pocket on the bottom face too, so one token can carry both sides of a card.
