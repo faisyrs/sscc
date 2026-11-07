@@ -1,6 +1,7 @@
 // Measuring token, split in two pieces for printers with a small bed.
 // Same token as token_2x8.scad (2 x 8 in, 3 mm thick, 2 mm sticker inset,
-// 1 mm pocket with a rounded rim, 1 mm deep notches at each inch), split at an inch station (5 in by default)
+// 1 mm pocket with a rounded rim, rounded outer top edge, 1 mm deep notches
+// at each inch), split at an inch station (5 in by default)
 // and joined with dovetails. Piece A is 50.8 x 132 mm including the
 // dovetails; piece B is 50.8 x 76.2 mm. Both fit side by side on a 142 mm
 // (5.6 in) bed: part = "plate".
@@ -29,6 +30,9 @@ inset = 2.0;               // border around the sticker; the pocket is 46.8 x 19
 recess = 1.0;              // pocket depth
 rim_r = 0.5;               // radius of the rounded pocket rim (0 for a square edge)
 rim_steps = 8;             // facets in the rounded rim
+edge_r = 0.4;              // radius of the rounded outer top edge (0 for a square edge). Above 0.4
+                           // the outer and inner roundings meet in a sharp crest at each notch tip.
+edge_steps = 10;           // slices in the rounded outer edge
 notch_base = 1.6; notch_depth = 1.0; overcut = 0.5;
 split = split_in * 25.4;
 
@@ -36,11 +40,38 @@ split = split_in * 25.4;
 tail_neck = 7; tail_tip = 10; tail_depth = 5;
 tail_x = [W * 0.27, W * 0.73];   // centres, clear of the edge notches
 
-module notch(x_edge, dir, y) {
-    linear_extrude(height = T + 2 * overcut)
-        polygon([[x_edge - dir * overcut, y - notch_base / 2],
-                 [x_edge - dir * overcut, y + notch_base / 2],
-                 [x_edge + dir * notch_depth, y]]);
+// The token's outline seen from above: the rectangle with the notches cut out.
+module outline2d() {
+    difference() {
+        square([W, L]);
+        for (i = [1:7]) {
+            y = i * 25.4;
+            polygon([[-overcut, y - notch_base / 2], [-overcut, y + notch_base / 2], [notch_depth, y]]);
+            polygon([[W + overcut, y - notch_base / 2], [W + overcut, y + notch_base / 2], [W - notch_depth, y]]);
+        }
+    }
+}
+
+// The top edge_r mm of the body: thin slices of the outline, each shrunk inward
+// along a quarter circle, so the outer edge (sides, corners and notches) is rounded.
+module rounded_band() {
+    for (i = [0 : edge_steps - 1]) {
+        z0 = T - edge_r + edge_r * i / edge_steps;
+        z1 = T - edge_r + edge_r * (i + 1) / edge_steps;
+        g = edge_r - sqrt(edge_r * edge_r - pow(z1 - T + edge_r, 2));
+        translate([0, 0, z0]) linear_extrude(height = z1 - z0 + 0.001) offset(r = -g) outline2d();
+    }
+}
+
+// The solid token before the pocket is cut. The bottom edge is rounded only when
+// double_sided, because a single-sided token prints on that face and gets glued there.
+module body() {
+    lo = double_sided ? edge_r : 0;
+    translate([0, 0, lo]) linear_extrude(height = T - edge_r - lo + 0.001) outline2d();
+    if (edge_r > 0) {
+        rounded_band();
+        if (double_sided) translate([0, 0, T]) mirror([0, 0, 1]) rounded_band();
+    }
 }
 
 // The sticker pocket, cut down from the top face (z = T). The floor is exactly
@@ -66,14 +97,10 @@ module pocket() {
 
 module token() {
     difference() {
-        cube([W, L, T]);
+        body();
         pocket();
         if (double_sided)  // the same pocket, mirrored onto the bottom face
             translate([0, 0, T]) mirror([0, 0, 1]) pocket();
-        for (i = [1:7]) {
-            translate([0, 0, -overcut]) notch(0, 1, i * 25.4);
-            translate([0, 0, -overcut]) notch(W, -1, i * 25.4);
-        }
     }
 }
 
