@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import math
 import random
+from dataclasses import dataclass
 
+from .. import content
 from .. import text as tx
 from .. import textures as tex
 from ..geometry import INCH, NOTCH_BASE, NOTCH_DEPTH, SIZES, Size
@@ -126,7 +128,8 @@ class Kit:
 
     def picture(self, art, x, y, w, h):
         self.s.add("graphics", Picture(x, y, w, h, art))
-        self.s.add("borders", Poly(chamfer(x, y, w, h, 0.01), stroke=C["steel_edge"], sw=0.45))
+        if not art.transparent:  # cut-out art sits straight on the panel, without a frame
+            self.s.add("borders", Poly(chamfer(x, y, w, h, 0.01), stroke=C["steel_edge"], sw=0.45))
 
     def bolt(self, key, x, y, w, h):
         """A lightning bolt over a paint splat, the rule's icon."""
@@ -283,28 +286,56 @@ def _setup(k: Kit):
     by = cy + th + gap + 1.2  # room for the tabs that sit across the panels' top edges
     bh = cy + ch - by
     tab_h = 4.0
+    if d.setup_text:
+        _rule_and_setup_panels(k, rx, by, rw, bh, tab_h, gap)
+    else:
+        _rule_panel_wide(k, rx, by, rw, bh, tab_h)
+
+
+def _rule_name_block(k: Kit, x, y, w, h, tab_h):
+    """Bolt icon and the rule's name, centred in the space below the tab."""
+    d = k.d
+    icon = h * 0.62
+    k.bolt("rule-bolt", x + 2.0, y + (h - icon) / 2 + 1.0, icon * 0.8, icon)
+    name = tx.plain(d.rule_name.upper())
+    nx = x + 2.0 + icon * 0.8 + 1.2
+    nw = x + w - 2.5 - nx
+    nsize = tx.fit_line(name, nw, h * 0.36, 2.5, "rule_name", DISPLAY)
+    k.label(nx + nw / 2, y + tab_h * 0.4 + (h - tab_h * 0.4) / 2, name, nsize, C["ink"], "middle", "rule_name", DISPLAY)
+
+
+def _centred_text(k: Kit, x, top, w, bottom, text_, block):
+    box_w, box_h = w - 6, bottom - top
+    fit = tx.fit_block([tx.tokenize(text_, k.d.keywords)], box_w, box_h, 4.4, MIN_BODY, block, BODY, BODY_LEADING)
+    used = tx.block_height(len(fit.lines), fit.size, BODY, BODY_LEADING)
+    k.block(x + 3, top + (box_h - used) / 2, fit, block, "middle", width=box_w)
+
+
+def _rule_and_setup_panels(k: Kit, rx, by, rw, bh, tab_h, gap):
+    """The rule's name on the left; the setup-only rule on the right."""
     rule_w = rw * 0.47
     k.panel("rule", rx, by, rule_w, bh)
     _tab(k, "rule-tab", rx + rule_w / 2, by, "DETACHMENT RULE", tab_h, rule_w * 0.62)
-    icon = bh * 0.62
-    k.bolt("rule-bolt", rx + 2.0, by + (bh - icon) / 2 + 1.0, icon * 0.8, icon)
-    name = tx.plain(d.rule_name.upper())
-    nx = rx + 2.0 + icon * 0.8 + 1.2
-    nw = rx + rule_w - 2.5 - nx
-    nsize = tx.fit_line(name, nw, bh * 0.36, 2.5, "rule_name", DISPLAY)
-    k.label(nx + nw / 2, by + tab_h * 0.4 + (bh - tab_h * 0.4) / 2, name, nsize, C["ink"], "middle", "rule_name", DISPLAY)
-
+    _rule_name_block(k, rx, by, rule_w, bh, tab_h)
     sx = rx + rule_w + gap
     sw_ = rx + rw - sx
     k.panel("setup", sx, by, sw_, bh)
     tab_w = sw_ * 0.4
     _tab(k, "setup-tab", sx + sw_ * 0.36, by, "SETUP ONLY", tab_h, tab_w)
     k.checker(sx + sw_ * 0.36 + tab_w / 2 + 1.5, by - tab_h * 0.32, sw_ * 0.3, tab_h * 0.64)
-    top = by + tab_h * 0.75
-    box_w, box_h = sw_ - 6, by + bh - 1.8 - top
-    fit = tx.fit_block([tx.tokenize(d.setup_text, d.keywords)], box_w, box_h, 4.4, MIN_BODY, "setup_text", BODY, BODY_LEADING)
-    used = tx.block_height(len(fit.lines), fit.size, BODY, BODY_LEADING)
-    k.block(sx + 3, top + (box_h - used) / 2, fit, "setup_text", "middle", width=box_w)
+    _centred_text(k, sx, by + tab_h * 0.75, sw_, by + bh - 1.8, k.d.setup_text, "setup_text")
+
+
+def _rule_panel_wide(k: Kit, rx, by, rw, bh, tab_h):
+    """No setup-only rule: one panel with the rule's name and its full text."""
+    k.panel("rule", rx, by, rw, bh)
+    _tab(k, "rule-tab", rx + rw * 0.25, by, "DETACHMENT RULE", tab_h, rw * 0.3)
+    k.checker(rx + rw * 0.4 + 1.5, by - tab_h * 0.32, rw * 0.2, tab_h * 0.64)
+    name_w = rw * 0.47
+    _rule_name_block(k, rx, by, name_w, bh, tab_h)
+    dx = rx + name_w
+    k.s.add("borders", Stroke(dx, by + tab_h * 0.9, dx, by + bh - 2.0, C["steel_edge"], 0.4))
+    _centred_text(k, dx, by + tab_h * 0.75, rw - name_w, by + bh - 1.8, k.d.in_play_text, "rule_text")
 
 
 def _tab(k: Kit, key, x_mid, y_edge, label, h, w):
@@ -314,15 +345,6 @@ def _tab(k: Kit, key, x_mid, y_edge, label, h, w):
     line = tx.plain(label)
     size = tx.fit_line(line, w - 3, h * 0.66, MIN_LABEL, key, LABEL)
     k.label(x_mid, y + h / 2, line, size, C["ink"], "middle", key)
-
-
-def _phase_label(s) -> str:
-    phase = "ANY" if s.phase == "any" else s.phase.upper()
-    if s.turn == "opponent":
-        return f"OPPONENT’S {phase} PHASE"
-    if s.turn == "either":
-        return f"{phase} PHASE • EITHER PLAYER"
-    return f"{phase} PHASE"
 
 
 def _min_width(paragraphs, size, max_lines, hi):
@@ -405,49 +427,106 @@ def _in_play(k: Kit):
             k.s.add("borders", Stroke(dx, cy + 2.2, dx, cy + sh - 2.2, C["steel_edge"], 0.4))
 
     # Lower row: one panel per stratagem, in phase order.
-    n = len(d.stratagems)
     py = cy + sh + gap
     ph = ch - sh - gap
-    pw = (cw - gap * (n - 1)) / n
-    art_w = min(pw * 0.31, ph - 2.0)
-    head_h, rib_h, cp_w = 4.4, 3.0, 7.4
-    tx0s = [cx + i * (pw + gap) + 1.0 + art_w + 1.6 for i in range(n)]
-    tw = (cx + pw - 1.4) - tx0s[0]
-
-    names = [tx.plain(s.name.upper()) for s in d.stratagems]
-    name_size = min(tx.fit_line(l, tw - cp_w - 2.6, head_h * 0.72, MIN_LABEL, f"{s.id}.name", LABEL) for l, s in zip(names, d.stratagems))
-    ribbons = [tx.plain(_phase_label(s)) for s in d.stratagems]
-    rib_size = min(tx.fit_line(l, tw - 4.5, rib_h * 0.7, MIN_LABEL, f"{s.id}.phase", LABEL_SEMI) for l, s in zip(ribbons, d.stratagems))
-
-    body_top_off = 1.1 + head_h + 0.6 + rib_h + 0.9
-    body_h = ph - body_top_off - 1.4
-    bodies = [
-        [tx.tokenize(s.when, kw, "WHEN:"), tx.tokenize(s.target, kw, "TARGET:"), tx.tokenize(s.effect, kw, "EFFECT:")]
-        for s in d.stratagems
-    ]
-    common = min(
-        tx.fit_block(b, tw, body_h, 2.4, MIN_BODY, f"stratagem {s.id}", BODY, BODY_LEADING).size
-        for b, s in zip(bodies, d.stratagems)
-    )
-
-    for i, (s, body, nm, rib) in enumerate(zip(d.stratagems, bodies, names, ribbons)):
-        x = cx + i * (pw + gap)
+    plan = _plan_panels(d, cx, cw, ph, gap)
+    for i, (s, body, nm, rib) in enumerate(zip(d.stratagems, plan.bodies, plan.names, plan.ribbons)):
+        x, pw, art_w = plan.xs[i], plan.widths[i], plan.art_ws[i]
+        tw = pw - art_w - 4.0
+        t0 = x + 1.0 + art_w + 1.6
         k.panel(f"strat-{s.id}", x, py, pw, ph)
         k.picture(s.art, x + 1.0, py + 1.0, art_w, ph - 2.0)
-        t0 = tx0s[i]
         hy = py + 1.1
-        k.plate(f"strat-{s.id}-name", t0, hy, tw - cp_w - 0.6, head_h, C["yellow"], c=0.6)
-        k.label(t0 + 1.2, hy + head_h / 2, nm, name_size, C["ink"], "start", f"{s.id}.name")
-        bx = t0 + tw - cp_w
-        k.plate(f"strat-{s.id}-cp", bx, hy, cp_w, head_h, C["badge"], c=0.6, chip=0.1)
-        cp = tx.plain(f"{s.cp} CP")
-        k.label(bx + cp_w / 2, hy + head_h / 2, cp, tx.fit_line(cp, cp_w - 1.6, head_h * 0.72, MIN_LABEL, f"{s.id}.cp", LABEL), C["cream"], "middle", f"{s.id}.cp")
-        ry = hy + head_h + 0.6
+        k.plate(f"strat-{s.id}-name", t0, hy, tw - plan.cp_w - 0.6, HEAD_H, C["yellow"], c=0.6)
+        k.label(t0 + 1.2, hy + HEAD_H / 2, nm, plan.name_size, C["ink"], "start", f"{s.id}.name")
+        bx = t0 + tw - plan.cp_w
+        k.plate(f"strat-{s.id}-cp", bx, hy, plan.cp_w, HEAD_H, C["badge"], c=0.6, chip=0.1)
+        cp = tx.plain(content.cp_label(s))
+        cp_size = tx.fit_line(cp, plan.cp_w - 1.6, HEAD_H * 0.72, MIN_LABEL, f"{s.id}.cp", LABEL)
+        k.label(bx + plan.cp_w / 2, hy + HEAD_H / 2, cp, cp_size, C["cream"], "middle", f"{s.id}.cp")
+        ry = hy + HEAD_H + 0.6
         rx_, rw_ = t0 + 0.6, tw - 1.2
-        k.plate(f"strat-{s.id}-ribbon", rx_, ry, rw_, rib_h, C["ribbon"][s.turn], pts=banner(rx_, ry, rw_, rib_h), chip=0.06, sw=0.25)
-        k.label(rx_ + rw_ / 2, ry + rib_h / 2, rib, rib_size, "#ffffff", "middle", f"{s.id}.phase", LABEL_SEMI)
-        fit = tx.Fit(common, tx.wrap(body, common, tw, BODY))
-        k.block(t0, py + body_top_off, fit, f"{s.id}.body")
+        k.plate(f"strat-{s.id}-ribbon", rx_, ry, rw_, RIB_H, C["ribbon"][s.turn], pts=banner(rx_, ry, rw_, RIB_H), chip=0.06, sw=0.25)
+        k.label(rx_ + rw_ / 2, ry + RIB_H / 2, rib, plan.rib_size, "#ffffff", "middle", f"{s.id}.phase", LABEL_SEMI)
+        fit = tx.Fit(plan.body_size, tx.wrap(body, plan.body_size, tw, BODY))
+        k.block(t0, py + BODY_TOP, fit, f"{s.id}.body")
+
+
+HEAD_H, RIB_H = 4.4, 3.0
+BODY_TOP = 1.1 + HEAD_H + 0.6 + RIB_H + 0.9  # from the panel's top edge to the top of the body text
+ART_FRACTIONS = (0.31, 0.26, 0.21)  # share of a panel's width given to its art, largest first
+WIDTH_EXPONENTS = (0.0, 0.5, 1.0)  # 0 = equal panels; 1 = panel width in proportion to body length
+
+
+@dataclass
+class PanelPlan:
+    xs: list
+    widths: list
+    art_ws: list
+    body_size: float
+    name_size: float
+    rib_size: float
+    cp_w: float
+    bodies: list
+    names: list
+    ribbons: list
+
+
+def _plan_panels(d: Detachment, cx, cw, ph, gap) -> PanelPlan:
+    """Choose panel widths and art size for the stratagem row.
+
+    Every combination of ART_FRACTIONS and WIDTH_EXPONENTS is tried. The plan
+    with the largest common body size wins, compared in 0.1 mm bands. Within a
+    band, the earlier candidate wins: equal panels before unequal ones, and
+    larger art before smaller. Equal panels and large art are kept unless
+    changing them makes the text noticeably bigger. The order is fixed, so
+    the choice is deterministic."""
+    kw = d.keywords
+    n = len(d.stratagems)
+    bodies = [content.body(s, kw) for s in d.stratagems]
+    names = [tx.plain(s.name.upper()) for s in d.stratagems]
+    ribbons = [tx.plain(content.phase_label(s)) for s in d.stratagems]
+    cp_w = 9.6 if any(s.upgrade for s in d.stratagems) else 7.4
+    body_h = ph - BODY_TOP - 1.4
+    lengths = [sum(tx.line_width(w, 1.0, BODY) for para in b for w in para) for b in bodies]
+    avail = cw - gap * (n - 1)
+    best, best_band, last_error = None, -1, None
+    for exp in WIDTH_EXPONENTS:
+        weights = [l**exp for l in lengths]
+        widths = [avail * w / sum(weights) for w in weights]
+        lo = avail / n * 0.7  # no panel narrower than 70% of an equal share
+        if min(widths) < lo:
+            short = sum(lo - w for w in widths if w < lo)
+            rest = sum(w for w in widths if w >= lo)
+            widths = [lo if w < lo else w - short * w / rest for w in widths]
+        for frac in ART_FRACTIONS:
+            art_ws = [min(w * frac, ph - 2.0) for w in widths]
+            tws = [w - a - 4.0 for w, a in zip(widths, art_ws)]
+            try:
+                size = min(
+                    tx.fit_block(b, tw, body_h, 2.4, MIN_BODY, f"stratagem {s.id}", BODY, BODY_LEADING).size
+                    for b, tw, s in zip(bodies, tws, d.stratagems)
+                )
+            except tx.LayoutError as e:
+                last_error = e
+                continue
+            band = int(size / 0.1 + 1e-9)
+            if band > best_band:
+                best_band, best = band, (widths, art_ws, tws, size)
+    if best is None:
+        raise last_error
+    widths, art_ws, tws, size = best
+    xs, x = [], cx
+    for w in widths:
+        xs.append(x)
+        x += w + gap
+    name_size = min(
+        tx.fit_line(l, tw - cp_w - 2.6, HEAD_H * 0.72, MIN_LABEL, f"{s.id}.name", LABEL) for l, tw, s in zip(names, tws, d.stratagems)
+    )
+    rib_size = min(
+        tx.fit_line(l, tw - 4.5, RIB_H * 0.7, MIN_LABEL, f"{s.id}.phase", LABEL_SEMI) for l, tw, s in zip(ribbons, tws, d.stratagems)
+    )
+    return PanelPlan(xs, widths, art_ws, size, name_size, rib_size, cp_w, bodies, names, ribbons)
 
 
 def safe_area(size: Size):

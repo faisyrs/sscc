@@ -1,0 +1,76 @@
+{
+  "schema_version": "2.0",
+  "id": "orks-bully-boyz",
+  "faction": "Orks",
+  "name": "Bully Boyz",
+  "detachment_points": 1,
+  "disposition": "Purge the Foe",
+  "source": {
+    "type": "official_app_screenshots_supplied_by_user",
+    "reference": "Warhammer app screenshots: Bully Boyz detachment page (9:16) and Stratagems list (7:52, two screens)",
+    "edition": "11th",
+    "source_version": "user-supplied screenshots (capture date not independently established)",
+    "last_verified": null,
+    "verified_against_source": false,
+    "verification_note": "Transcribed from the screenshots; not yet checked by the user. Bold terms in keywords follow the app's bold text. The app shows the upgrade as 'Or: ... +1CP' and the cost as '1CP/2CP'."
+  },
+  "keywords": [
+    "MEGANOBZ/NOBZ",
+    "[SUSTAINED HITS 1]",
+    "destroyed",
+    "selected to fight",
+    "selected to attack",
+    "riled up",
+    "hit rolls",
+    "wound rolls",
+    "S",
+    "T"
+  ],
+  "hero_art": { "file": "art/hero.png", "crop": [0.0, 0.0, 0.905, 1.0] },
+  "detachment_rule": {
+    "id": "displays-of-savagery",
+    "name": "Displays of Savagery",
+    "parts": [
+      {
+        "display_context": "in_play",
+        "text": "Friendly MEGANOBZ/NOBZ units’ melee attacks have [SUSTAINED HITS 1]."
+      }
+    ]
+  },
+  "stratagems": [
+    {
+      "id": "hulking-brutes",
+      "name": "Hulking Brutes",
+      "cp": 1,
+      "phase": "shooting",
+      "turn": "opponent",
+      "when": "Your opponent’s Shooting phase, when an enemy unit targets a friendly MEGANOBZ/NOBZ unit.",
+      "target": "That MEGANOBZ/NOBZ unit.",
+      "effect": "Ranged attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls.",
+      "upgrade": { "extra_cp": 1, "text": "Ranged attacks that target your unit have -1 to wound rolls." },
+      "art": { "file": "art/hulking-brutes.png", "crop": [0.0, 0.0, 0.94, 1.0] }
+    },
+    {
+      "id": "too-arrogant-to-die",
+      "name": "Too Arrogant to Die",
+      "cp": 1,
+      "phase": "fight",
+      "turn": "either",
+      "when": "Fight phase, when an enemy unit targets a friendly MEGANOBZ/NOBZ unit.",
+      "target": "That MEGANOBZ/NOBZ unit.",
+      "effect": "When a model in your unit is destroyed, if your unit has not been selected to fight this phase, roll one D6, with +1 to that roll if your unit is riled up:\n• On a 4+, do not remove that model from the battlefield. When your unit has fought, or at the end of the phase (whichever comes first), that model is removed from the battlefield.",
+      "art": { "file": "art/too-arrogant-to-die.png" }
+    },
+    {
+      "id": "armed-to-da-teef",
+      "name": "Armed To Da Teef",
+      "cp": 1,
+      "phase": ["shooting", "fight"],
+      "turn": "either",
+      "when": "Your Shooting phase or the Fight phase, when a friendly MEGANOBZ/NOBZ unit is selected to attack.",
+      "target": "That MEGANOBZ/NOBZ unit.",
+      "effect": "Your unit’s attacks can:\n• Re-roll hit rolls of 1.\n• If your unit is riled up, re-roll hit rolls.",
+      "art": { "file": "art/armed-to-da-teef.png" }
+    }
+  ]
+}

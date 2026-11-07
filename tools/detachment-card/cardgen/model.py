@@ -24,6 +24,17 @@ class Art:
     path: Path
     # Fractions of the source image to keep: left, top, right, bottom.
     crop: tuple[float, float, float, float] = (0.0, 0.0, 1.0, 1.0)
+    # Art with a transparent background is fitted whole ("contain") and drawn
+    # without a frame. Opaque art fills its slot ("cover"), and the overflow is trimmed.
+    transparent: bool = False
+
+
+@dataclass(frozen=True)
+class Upgrade:
+    """An optional stronger version of a stratagem for extra CP ("Or: ... +1CP")."""
+
+    extra_cp: int
+    text: str
 
 
 @dataclass(frozen=True)
@@ -31,12 +42,21 @@ class Stratagem:
     id: str
     name: str
     cp: int
-    phase: str
+    phases: tuple[str, ...]
     turn: str
     when: str
     target: str
-    effect: str
+    effect: str  # paragraphs separated by newlines; a bullet paragraph starts with "• "
     art: Art
+    upgrade: Upgrade | None = None
+
+    @property
+    def phase(self) -> str:
+        return self.phases[0]
+
+    @property
+    def effect_paragraphs(self) -> tuple[str, ...]:
+        return tuple(p.strip() for p in self.effect.split("\n") if p.strip())
 
 
 @dataclass(frozen=True)
@@ -47,8 +67,8 @@ class Detachment:
     detachment_points: int
     disposition: str
     rule_name: str
-    setup_headline: str
-    setup_text: str
+    setup_headline: str  # "" when the source gives none
+    setup_text: str  # "" when the detachment has no setup-only rule
     in_play_text: str
     hero_art: Art
     stratagems: tuple[Stratagem, ...]  # already in display order
@@ -79,6 +99,10 @@ def _art(obj, where: str, base: Path) -> Art:
     path = (base / file).resolve()
     if not path.is_file():
         raise SourceError(f"{where}.file: image not found: {path}")
+    from PIL import Image
+
+    with Image.open(path) as im:
+        transparent = im.mode in ("RGBA", "LA", "PA") and im.getchannel("A").getextrema()[0] < 255
     crop = obj.get("crop", [0.0, 0.0, 1.0, 1.0])
     if (
         not isinstance(crop, list)
@@ -88,12 +112,12 @@ def _art(obj, where: str, base: Path) -> Art:
         or crop[1] >= crop[3]
     ):
         raise SourceError(f"{where}.crop: expected [left, top, right, bottom] fractions between 0 and 1")
-    return Art(path, tuple(float(c) for c in crop))
+    return Art(path, tuple(float(c) for c in crop), transparent)
 
 
 def display_order(stratagems):
     """Phase order first; source order breaks ties (sort is stable)."""
-    return sorted(stratagems, key=lambda s: PHASES.index(s.phase))
+    return sorted(stratagems, key=lambda s: PHASES.index(s.phase))  # s.phase is the first phase listed
 
 
 def parse(data: dict, base: Path) -> Detachment:
@@ -109,9 +133,8 @@ def parse(data: dict, base: Path) -> Detachment:
         if ctx not in CONTEXTS:
             raise SourceError(f"{pw}.display_context: must be one of {CONTEXTS}, got {ctx!r}")
         texts[ctx].append(_req(p, "text", str, pw).strip())
-    for ctx in CONTEXTS:
-        if not texts[ctx]:
-            raise SourceError(f"$.detachment_rule.parts: needs at least one {ctx!r} part")
+    if not texts["in_play"]:
+        raise SourceError("$.detachment_rule.parts: needs at least one 'in_play' part")
 
     raw = _req(data, "stratagems", list, w)
     if not raw:
@@ -123,9 +146,19 @@ def parse(data: dict, base: Path) -> Detachment:
         if sid in seen:
             raise SourceError(f"{sw}.id: duplicate id {sid!r}")
         seen.add(sid)
-        phase = _req(s, "phase", str, sw)
-        if phase not in PHASES:
-            raise SourceError(f"{sw}.phase: must be one of {PHASES}, got {phase!r}")
+        if "phase" not in s:
+            raise SourceError(f"{sw}.phase: required field is missing")
+        phases = s["phase"] if isinstance(s["phase"], list) else [s["phase"]]
+        if not phases or not all(isinstance(p, str) and p in PHASES for p in phases) or len(set(phases)) != len(phases):
+            raise SourceError(f"{sw}.phase: must be one of {PHASES}, or a list of them, got {s['phase']!r}")
+        phases = sorted(phases, key=PHASES.index)
+        upgrade = None
+        if "upgrade" in s:
+            uw = f"{sw}.upgrade"
+            extra = _req(s["upgrade"], "extra_cp", int, uw)
+            if extra < 1:
+                raise SourceError(f"{uw}.extra_cp: must be >= 1")
+            upgrade = Upgrade(extra, _req(s["upgrade"], "text", str, uw))
         turn = _req(s, "turn", str, sw)
         if turn not in TURNS:
             raise SourceError(f"{sw}.turn: must be one of {TURNS}, got {turn!r}")
@@ -137,12 +170,13 @@ def parse(data: dict, base: Path) -> Detachment:
                 id=sid,
                 name=_req(s, "name", str, sw),
                 cp=cp,
-                phase=phase,
+                phases=tuple(phases),
                 turn=turn,
                 when=_req(s, "when", str, sw),
                 target=_req(s, "target", str, sw),
                 effect=_req(s, "effect", str, sw),
                 art=_art(_req(s, "art", dict, sw), f"{sw}.art", base),
+                upgrade=upgrade,
             )
         )
 
@@ -161,7 +195,7 @@ def parse(data: dict, base: Path) -> Detachment:
         detachment_points=dp,
         disposition=_req(data, "disposition", str, w),
         rule_name=_req(rule, "name", str, "$.detachment_rule"),
-        setup_headline=_req(rule, "setup_headline", str, "$.detachment_rule"),
+        setup_headline=_req(rule, "setup_headline", str, "$.detachment_rule") if "setup_headline" in rule else "",
         setup_text=" ".join(texts["setup"]),
         in_play_text=" ".join(texts["in_play"]),
         hero_art=_art(_req(data, "hero_art", dict, w), "$.hero_art", base),

@@ -31,23 +31,39 @@ def px(mm: float) -> int:
 
 
 @lru_cache(maxsize=None)
-def _prepared_png(path, crop, w_px: int, h_px: int) -> bytes:
-    """Crop the art to its crop box, cover-fit it to the target aspect (centred),
-    and resample it to the exact print pixels. The PNG is embedded in the SVG,
-    so no viewer has to scale it."""
+def _prepared_png(path, crop, transparent, w_px: int, h_px: int) -> bytes:
+    """Crop the art to its crop box and resample it to the exact print pixels.
+    The PNG is embedded in the SVG, so no viewer has to scale it.
+
+    Opaque art is cover-fitted: it fills the slot, centred, and the overflow is
+    trimmed. Art with a transparent background has its empty margin trimmed and
+    is then contain-fitted: all of it is shown, centred, and it keeps its
+    transparency."""
     with Image.open(path) as im:
-        im = im.convert("RGB")
+        im = im.convert("RGBA")
         W, H = im.size
         l, t, r, b = crop[0] * W, crop[1] * H, crop[2] * W, crop[3] * H
         cw, ch = r - l, b - t
         target = w_px / h_px
-        if cw / ch > target:  # too wide: trim the sides
-            nw = ch * target
-            l, r = l + (cw - nw) / 2, l + (cw + nw) / 2
-        else:  # too tall: trim the top and bottom
-            nh = cw / target
-            t, b = t + (ch - nh) / 2, t + (ch + nh) / 2
-        out = im.resize((w_px, h_px), Image.Resampling.LANCZOS, box=(l, t, r, b))
+        if transparent:
+            # Trim the empty transparent margin so the art fills as much of the slot as it can.
+            box = im.crop((round(l), round(t), round(r), round(b))).getchannel("A").point(lambda a: 255 if a > 8 else 0).getbbox()
+            if box:
+                l, t, r, b = round(l) + box[0], round(t) + box[1], round(l) + box[2], round(t) + box[3]
+                cw, ch = r - l, b - t
+            scale = min(w_px / cw, h_px / ch)
+            fw, fh = max(1, round(cw * scale)), max(1, round(ch * scale))
+            fitted = im.resize((fw, fh), Image.Resampling.LANCZOS, box=(l, t, r, b))
+            out = Image.new("RGBA", (w_px, h_px), (0, 0, 0, 0))
+            out.paste(fitted, ((w_px - fw) // 2, (h_px - fh) // 2))
+        else:
+            if cw / ch > target:  # too wide: trim the sides
+                nw = ch * target
+                l, r = l + (cw - nw) / 2, l + (cw + nw) / 2
+            else:  # too tall: trim the top and bottom
+                nh = cw / target
+                t, b = t + (ch - nh) / 2, t + (ch + nh) / 2
+            out = im.convert("RGB").resize((w_px, h_px), Image.Resampling.LANCZOS, box=(l, t, r, b))
         buf = io.BytesIO()
         out.save(buf, "PNG", optimize=False, compress_level=6)
         return buf.getvalue()
@@ -109,7 +125,7 @@ def _element(p) -> str:
             f'stroke-width="{_n(p.sw)}" opacity="{_n(p.opacity)}"/>'
         )
     if isinstance(p, Picture):
-        data = _prepared_png(p.art.path, p.art.crop, px(p.w), px(p.h))
+        data = _prepared_png(p.art.path, p.art.crop, p.art.transparent, px(p.w), px(p.h))
         b64 = base64.b64encode(data).decode()
         return (
             f'<image x="{_n(p.x)}" y="{_n(p.y)}" width="{_n(p.w)}" height="{_n(p.h)}" '

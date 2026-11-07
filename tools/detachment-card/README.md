@@ -65,7 +65,13 @@ Copy `detachments/orks-kult-of-speed/` and edit `detachment.json`:
 
 - `detachment_rule.parts[]`: each part has `display_context` `setup` (setup side) or `in_play` (top strip of the in-play side).
 - `detachment_rule.setup_headline`: the one-line summary on the setup side.
-- `stratagems[]`: `phase` is one of command, movement, shooting, charge, fight, any. `turn` is one of your, opponent, either. Panels are sorted by phase, and stratagems in the same phase keep their file order. Any number of stratagems is laid out; the build fails if they don't fit.
+- `stratagems[]`: `phase` is one of command, movement, shooting, charge, fight, any, or a list such as `["shooting", "fight"]`, which is sorted by its first phase. `turn` is one of your, opponent, either. Panels are sorted by phase, and stratagems in the same phase keep their file order. Any number of stratagems is laid out; the build fails if they don't fit.
+- `effect`: separate paragraphs with `\n`. Start a bullet paragraph with `• `.
+- `upgrade` (optional): `{ "extra_cp": 1, "text": "..." }` for the app's "Or: ... +1CP". The badge then reads `1/2 CP` and the body ends with `OR (+1CP): ...`.
+- `detachment_rule.parts[]` with `display_context: "setup"` is optional. Without one, the setup side shows the rule's full text.
+- Art with a transparent background is detected automatically. It is trimmed to its visible edges, fitted whole into its slot, and drawn without a frame.
+- The grunge style tries a few panel widths and art sizes for the stratagem row and keeps the one that gives the largest text. Equal panels and large art are kept unless changing them makes the text noticeably bigger.
+- A source missing a required field, such as `orks-wreckas` until its detachment page is transcribed, fails the build with the field's JSON path.
 - `keywords[]`: exact phrases drawn in bold wherever they appear. Keywords in square brackets, such as `[ASSAULT]`, are weapon abilities; grunge draws them in red.
 - `faction_icon` (optional): shown at the top right of the grunge setup side. Without it, the faction plate takes the space.
 - `hero_art` and `stratagems[].art`: `{ "file": "art/x.png", "crop": [left, top, right, bottom] }`. The crop is in fractions of the image and is optional. The art is then cover-fitted, centred, to its slot.

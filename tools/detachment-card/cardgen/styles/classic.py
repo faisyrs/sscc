@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import random
+from .. import content
 from .. import text as tx
 from ..geometry import INCH, SIZES, Size
 from ..model import Detachment
@@ -28,7 +29,6 @@ THEME = {
     "bar_text": "#ffffff",
     "guide": "#00b7ff",
 }
-TURN_LABEL = {"your": "YOUR TURN", "opponent": "ENEMY TURN", "either": "EITHER TURN"}
 
 MIN_BODY = 1.4  # mm, about 4 pt: the smallest body text allowed
 MIN_TITLE = 1.8
@@ -122,15 +122,17 @@ def _setup(scene: Scene, d: Detachment, size: Size):
     _single(scene, px + pad, row1, meta, meta_size, THEME["ink"], "start", "faction_disposition")
     _single(scene, px + pw - pad, row1, dp, dp_size, THEME["ink"], "end", "detachment_points")
 
-    head = [(d.setup_headline.upper(), "bold")]
+    # Without a setup-only rule, the setup side shows the rule's name and its full text.
+    head = [((d.setup_headline or d.rule_name).upper(), "bold")]
     hsize = tx.fit_line(head, inner_w, 3.5, MIN_BODY, "setup_headline")
     row2 = row1 + 5.6
     _single(scene, px + pad, row2, head, hsize, THEME["ink"], "start", "setup_headline")
 
     body_top = row2 + 3.0
     body_h = iy + ih - pad + 0.8 - body_top
-    fit = tx.fit_block([tx.tokenize(d.setup_text, kw)], inner_w, body_h, 2.8, MIN_BODY, "setup_text")
-    _text_lines(scene, px + pad, body_top, fit, THEME["ink"], "setup_text")
+    block = "setup_text" if d.setup_text else "rule_text"
+    fit = tx.fit_block([tx.tokenize(d.setup_text or d.in_play_text, kw)], inner_w, body_h, 2.8, MIN_BODY, block)
+    _text_lines(scene, px + pad, body_top, fit, THEME["ink"], block)
 
 
 def _in_play(scene: Scene, d: Detachment, size: Size):
@@ -164,15 +166,7 @@ def _in_play(scene: Scene, d: Detachment, size: Size):
     art_h = ph - head_h - bar_h - 2.4
     art_w = min(art_h * 0.79, pw * 0.3)
 
-    bodies = []
-    for s in d.stratagems:
-        bodies.append(
-            [
-                tx.tokenize(s.when, kw, "WHEN:"),
-                tx.tokenize(s.target, kw, "TARGET:"),
-                tx.tokenize(s.effect, kw, "EFFECT:"),
-            ]
-        )
+    bodies = [content.body(s, kw) for s in d.stratagems]
     body_w = pw - art_w - 3.4
     body_h = art_h + 0.6
     # Every stratagem body uses the same size, so the panels look alike: the largest size at which all of them fit.
@@ -191,9 +185,8 @@ def _in_play(scene: Scene, d: Detachment, size: Size):
         scene.add("borders", Rect(hx, py + 0.7 + head_h + 0.2, hw, bar_h, THEME["turn"][s.turn]))
         _single(scene, hx + 1.3, py + 0.7 + head_h / 2, hl, head_size, THEME["ink"], "start", f"{s.id}.name")
         bar_mid = py + 0.9 + head_h + bar_h / 2
-        phase = "ANY PHASE" if s.phase == "any" else s.phase.upper()
-        label = [(f"{phase} • {TURN_LABEL[s.turn]}", "bold")]
-        cp = [(f"{s.cp} CP", "bold")]
+        label = [(content.phase_label(s), "bold")]
+        cp = [(content.cp_label(s), "bold")]
         _single(scene, hx + 0.9, bar_mid, label, tx.fit_line(label, hw * 0.75, 2.25, MIN_BODY, f"{s.id}.phase"), THEME["bar_text"], "start", f"{s.id}.phase")
         _single(scene, hx + hw - 0.9, bar_mid, cp, 2.35, THEME["bar_text"], "end", f"{s.id}.cp")
         ay = py + 0.9 + head_h + bar_h + 0.9

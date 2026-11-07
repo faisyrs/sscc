@@ -15,9 +15,12 @@ sys.path.insert(0, str(ROOT))
 
 from psd_tools import PSDImage  # noqa: E402
 
-from cardgen import build, layout, model, render, text  # noqa: E402
+from cardgen import build, content, layout, model, render, text  # noqa: E402
 
 SOURCE = ROOT / "detachments/orks-kult-of-speed/detachment.json"
+BULLY = ROOT / "detachments/orks-bully-boyz/detachment.json"
+WRECKAS = ROOT / "detachments/orks-wreckas/detachment.json"
+COMPLETE = (SOURCE, BULLY)  # sources with everything a card needs
 
 
 def raw():
@@ -53,9 +56,10 @@ class SourceValidation(unittest.TestCase):
             "$.stratagems[0].art.file": lambda d: d["stratagems"][0]["art"].update(file="art/missing.png"),
             "$.hero_art.crop": lambda d: d["hero_art"].update(crop=[0, 0, 1.5, 1]),
             "$.detachment_rule.parts": lambda d: d["detachment_rule"].update(
-                parts=[p for p in d["detachment_rule"]["parts"] if p["display_context"] != "setup"]
+                parts=[p for p in d["detachment_rule"]["parts"] if p["display_context"] != "in_play"]
             ),
-            "$.detachment_rule.setup_headline": lambda d: d["detachment_rule"].pop("setup_headline"),
+            "$.stratagems[2].phase": lambda d: d["stratagems"][2].update(phase=["movement", "movement"]),
+            "$.stratagems[0].upgrade.extra_cp": lambda d: d["stratagems"][0].update(upgrade={"extra_cp": 0, "text": "x"}),
         }
         for where, mutate in cases.items():
             with self.subTest(where):
@@ -103,6 +107,7 @@ class Layout(unittest.TestCase):
                         self.assertEqual(got(f"{s.id}.name"), s.name.upper())
                         self.assertEqual(got(f"{s.id}.cp"), f"{s.cp} CP")
                         self.assertEqual(got(f"{s.id}.body"), norm(f"WHEN: {s.when} TARGET: {s.target} EFFECT: {s.effect}"))
+                        self.assertEqual(got(f"{s.id}.body"), norm(content.body_text(s)))
 
     def test_stratagem_panels_follow_phase_order(self):
         for st in layout.STYLES:
@@ -173,6 +178,62 @@ class Layout(unittest.TestCase):
         data.pop("faction_icon")
         sc = layout.build(parse(data), layout.SIZES["full"], "setup", "grunge")
         self.assertEqual(len([p for p in sc.layers["graphics"] if isinstance(p, layout.Picture)]), 1)
+
+
+class OtherDetachments(unittest.TestCase):
+    """Every complete source builds in every style and size, and its cards say exactly what the source says."""
+
+    def test_every_source_matches_its_cards(self):
+        for src in COMPLETE:
+            d = model.load(src)
+            for st in layout.STYLES:
+                for z in layout.SIZES:
+                    for side in layout.SIDES:
+                        sc = layout.build(d, layout.SIZES[z], side, st)
+                        drawn = {}
+                        for p in sc.layers["text"]:
+                            if isinstance(p, layout.Text):
+                                drawn.setdefault(p.block, []).append(text.line_text(p.line))
+                        got = lambda b: norm(" ".join(drawn.get(b, [])))
+                        with self.subTest(source=d.id, style=st, size=z, side=side):
+                            if side == "in_play":
+                                self.assertEqual(got("in_play_text"), norm(d.in_play_text))
+                                for s in d.stratagems:
+                                    self.assertEqual(got(f"{s.id}.body"), norm(content.body_text(s)))
+                                    self.assertEqual(got(f"{s.id}.cp"), content.cp_label(s))
+                                    if st == "grunge":
+                                        self.assertEqual(got(f"{s.id}.phase"), content.phase_label(s))
+                            else:
+                                block = "setup_text" if d.setup_text else "rule_text"
+                                self.assertEqual(got(block), norm(d.setup_text or d.in_play_text))
+
+    def test_bully_boyz_source_features(self):
+        d = model.load(BULLY)
+        by = {s.id: s for s in d.stratagems}
+        self.assertEqual(d.setup_text, "")
+        self.assertEqual(by["armed-to-da-teef"].phases, ("shooting", "fight"))
+        self.assertEqual(content.phase_label(by["armed-to-da-teef"]), "SHOOTING OR FIGHT PHASE")
+        self.assertEqual(content.cp_label(by["hulking-brutes"]), "1/2 CP")
+        self.assertIn("OR (+1CP): Ranged attacks that target your unit have -1 to wound rolls.", content.body_text(by["hulking-brutes"]))
+        self.assertEqual(by["armed-to-da-teef"].effect_paragraphs, ("Your unit’s attacks can:", "• Re-roll hit rolls of 1.", "• If your unit is riled up, re-roll hit rolls."))
+        # Sorted by first phase; same-phase stratagems keep their source order.
+        self.assertEqual([s.id for s in d.stratagems], ["hulking-brutes", "armed-to-da-teef", "too-arrogant-to-die"])
+        self.assertTrue(by["hulking-brutes"].art.transparent)
+        self.assertFalse(model.load(SOURCE).stratagems[0].art.transparent)
+
+    def test_transparent_art_keeps_its_transparency(self):
+        art = model.load(BULLY).stratagems[0].art
+        from io import BytesIO
+        from PIL import Image
+
+        im = Image.open(BytesIO(render._prepared_png(art.path, art.crop, art.transparent, 200, 300)))
+        self.assertEqual(im.mode, "RGBA")
+        self.assertEqual(im.getpixel((0, 0))[3], 0)
+
+    def test_incomplete_source_refuses_to_build(self):
+        with self.assertRaises(model.SourceError) as cm:
+            model.load(WRECKAS)
+        self.assertIn("$.detachment_rule", str(cm.exception))
 
 
 class Outputs(unittest.TestCase):
