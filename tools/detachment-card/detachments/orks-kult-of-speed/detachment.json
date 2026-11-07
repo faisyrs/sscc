@@ -28,7 +28,7 @@
     "advance/fall-back move",
     "eligible to declare a charge"
   ],
-  "background_art": { "file": "art/background.png", "crop": [0.0, 0.0, 1.0, 0.97] },
+  "background_art": { "file": "art/background.png" },
   "detachment_rule": {
     "id": "adrenaline-junkies",
     "name": "Adrenaline Junkies",

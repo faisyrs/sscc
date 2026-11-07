@@ -27,7 +27,7 @@
     "T"
   ],
   "theme": { "title_plate": [34, 32, 30], "label_plate": [226, 221, 208] },
-  "background_art": { "file": "art/background.png", "crop": [0.0, 0.0, 1.0, 0.985] },
+  "background_art": { "file": "art/background.png" },
   "detachment_rule": {
     "id": "displays-of-savagery",
     "name": "Displays of Savagery",

@@ -28,7 +28,6 @@
     "eligible to declare a charge"
   ],
   "theme": { "title_plate": [28, 58, 112] },
-  "background_focus": "left",
   "background_art": { "file": "art/background.png" },
   "detachment_rule": {
     "id": "wreckin-and-lootin",
