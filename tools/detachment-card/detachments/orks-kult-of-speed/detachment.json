@@ -23,7 +23,7 @@
     "[ASSAULT]",
     "[SUSTAINED HITS 1]"
   ],
-  "hero_art": { "file": "art/biker.png", "crop": [0.0, 0.06, 1.0, 1.0] },
+  "hero_art": { "file": "art/hero.png" },
   "faction_icon": { "file": "art/biker.png", "crop": [0.69, 0.58, 0.93, 0.98] },
   "detachment_rule": {
     "id": "adrenaline-junkies",

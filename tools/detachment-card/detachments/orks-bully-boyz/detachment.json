@@ -26,7 +26,7 @@
     "S",
     "T"
   ],
-  "hero_art": { "file": "art/hero.png", "crop": [0.0, 0.0, 0.905, 1.0] },
+  "hero_art": { "file": "art/hero.png" },
   "detachment_rule": {
     "id": "displays-of-savagery",
     "name": "Displays of Savagery",

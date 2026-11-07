@@ -26,7 +26,7 @@
     "objective",
     "eligible to declare a charge"
   ],
-  "hero_art": { "file": "art/hero.png", "crop": [0.03, 0.0, 1.0, 1.0] },
+  "hero_art": { "file": "art/hero.png" },
   "stratagems": [
     {
       "id": "gun-crazy-show-offs",
