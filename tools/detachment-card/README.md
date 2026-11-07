@@ -36,6 +36,15 @@ python generate.py detachments/orks-kult-of-speed/detachment.json --style all   
 python -m unittest discover -s tests
 ```
 
+## Sticker sheet
+
+```sh
+python make_sheet.py detachments/*/detachment.json              # US Letter
+python make_sheet.py detachments/*/detachment.json --paper a4
+```
+
+Run this after `generate.py`. It writes `output/stickers_<style>_<size>_<paper>.pdf`, with the pocket-size stickers at 100% scale. Each sticker has a 1.5 mm bleed, made by extending its edge pixels, and crop marks at the trim line. Both sides of a detachment stay on the same page, with up to 4 stickers per page. On A4 the page is too narrow for side crop marks, so only the top and bottom marks are drawn. Print at actual size, not "fit to page".
+
 ## Why the output is predictable
 
 - **The source file is the only input.** Names, rules text, keywords, the setup
