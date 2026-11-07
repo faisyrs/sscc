@@ -27,6 +27,7 @@
     "objective",
     "eligible to declare a charge"
   ],
+  "theme": { "title_plate": [28, 58, 112] },
   "background_art": { "file": "art/background.png" },
   "detachment_rule": {
     "id": "wreckin-and-lootin",
@@ -48,7 +49,7 @@
       "when": "Your opponent’s Shooting phase, when an enemy unit has shot.",
       "target": "One friendly FLASH GITZ/TANKBUSTAS unit hit by those attacks.",
       "effect": "Your unit shoots using normal shooting, but while doing so your unit can only target that enemy unit.",
-      "art": { "file": "art/gun-crazy-show-offs-a.png", "_alternative": "art/gun-crazy-show-offs-b.png" }
+      "art": { "file": "art/gun-crazy-show-offs-a-blue.png", "_alternatives": ["art/gun-crazy-show-offs-b-blue.png", "art/gun-crazy-show-offs-a.png", "art/gun-crazy-show-offs-b.png"] }
     },
     {
       "id": "drive-by-bustin",
@@ -59,7 +60,7 @@
       "when": "Your Shooting phase, when a friendly ORKS TRANSPORT unit is selected to shoot.",
       "target": "That ORKS TRANSPORT unit.",
       "effect": "Your unit’s ranged attacks with weapons selected for the Firing Deck ability have +1 to hit rolls.",
-      "art": { "file": "art/drive-by-bustin-a.png", "_alternative": "art/drive-by-bustin-b.png" }
+      "art": { "file": "art/drive-by-bustin-a-blue.png", "_alternatives": ["art/drive-by-bustin-b-blue.png", "art/drive-by-bustin-a.png", "art/drive-by-bustin-b.png"] }
     },
     {
       "id": "grab-it",
@@ -70,7 +71,7 @@
       "when": "Your Shooting phase, when a friendly unengaged BREAKA BOYZ/FLASH GITZ/TANKBUSTAS unit has shot.",
       "target": "That BREAKA BOYZ/FLASH GITZ/TANKBUSTAS unit.",
       "effect": "• Your unit can make a normal move of up to 6\", and must end that move within range of an objective.\n• Your unit is not eligible to declare a charge until the end of the turn.",
-      "art": { "file": "art/grab-it-a.png", "_alternative": "art/grab-it-b.png" }
+      "art": { "file": "art/grab-it-a-blue.png", "_alternatives": ["art/grab-it-b-blue.png", "art/grab-it-a.png", "art/grab-it-b.png"] }
     }
   ]
 }

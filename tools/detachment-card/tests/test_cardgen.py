@@ -56,6 +56,8 @@ class SourceValidation(unittest.TestCase):
             "$.stratagems[0].art.file": lambda d: d["stratagems"][0]["art"].update(file="art/missing.png"),
             "$.background_art.crop": lambda d: d["background_art"].update(crop=[0, 0, 1.5, 1]),
             "$.hero_art": lambda d: d.pop("background_art"),
+            "$.theme.title_plate": lambda d: d.update(theme={"title_plate": [300, 0, 0]}),
+            "$.theme.accent": lambda d: d.update(theme={"accent": "#ffffff"}),
             "$.detachment_rule.parts": lambda d: d["detachment_rule"].update(
                 parts=[p for p in d["detachment_rule"]["parts"] if p["display_context"] != "in_play"]
             ),
@@ -239,6 +241,15 @@ class OtherDetachments(unittest.TestCase):
         im = Image.open(BytesIO(render._prepared_png(art.path, art.crop, art.transparent, 200, 300)))
         self.assertEqual(im.mode, "RGBA")
         self.assertEqual(im.getpixel((0, 0))[3], 0)
+
+    def test_theme_recolours_plates_but_not_phase_colours(self):
+        from cardgen.styles import grunge
+
+        plain = layout.build(model.load(SOURCE), layout.SIZES["full"], "in_play", "grunge")
+        themed = layout.build(model.load(BULLY), layout.SIZES["full"], "in_play", "grunge")
+        self.assertEqual(grunge.Kit(themed, model.load(BULLY), layout.SIZES["full"]).c["yellow"], (226, 221, 208))
+        self.assertEqual(grunge.Kit(plain, model.load(SOURCE), layout.SIZES["full"]).c["yellow"], grunge.C["yellow"])
+        self.assertEqual(grunge.Kit(themed, model.load(BULLY), layout.SIZES["full"]).c["ribbon"], grunge.C["ribbon"])
 
     def test_incomplete_source_refuses_to_build(self):
         data = json.loads(WRECKAS.read_text(encoding="utf-8"))

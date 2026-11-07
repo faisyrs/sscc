@@ -75,6 +75,7 @@ Copy `detachments/orks-kult-of-speed/` and edit `detachment.json`:
 - `keywords[]`: exact phrases drawn in bold wherever they appear. Keywords in square brackets, such as `[ASSAULT]`, are weapon abilities; grunge draws them in red.
 - `faction_icon` (optional): shown at the top right of the grunge setup side. Without it, the faction plate takes the space.
 - `background_art`: a full-card picture behind the grunge setup side, with the panels laid over it. Use about 4:1, ideally 2400 × 600 px or larger. The main figure should be in the middle third, which stays uncovered. Classic uses it as its side picture. You can give `hero_art` instead, for the older layout with the picture beside the panels.
+- `theme` (optional, grunge only): `{ "title_plate": [r, g, b], "label_plate": [r, g, b], "label_ink": "#rrggbb" }` recolours the title plate, the label plates (tabs and name bars) and the text on them. The phase ribbons and CP badges keep their colours on every card.
 - Keys starting with `_` (such as `_alternative`, a second art choice) are notes and are ignored by the generator.
 - `hero_art` and `stratagems[].art`: `{ "file": "art/x.png", "crop": [left, top, right, bottom] }`. The crop is in fractions of the image and is optional. The art is then cover-fitted, centred, to its slot.
 

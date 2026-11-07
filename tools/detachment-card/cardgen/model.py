@@ -78,6 +78,8 @@ class Detachment:
     # A full-card picture behind the setup side (about 4:1, e.g. 2400 x 600 px).
     # Grunge draws the panels over it; classic uses it as its hero picture.
     background_art: Art | None = None
+    # Optional card colours: title_plate and label_plate as [r, g, b], label_ink as "#rrggbb".
+    theme: dict = field(default_factory=dict)
     source: dict = field(default_factory=dict)
     source_dir: Path = Path(".")
 
@@ -189,6 +191,20 @@ def parse(data: dict, base: Path) -> Detachment:
 
     if "hero_art" not in data and "background_art" not in data:
         raise SourceError("$.hero_art: required field is missing (or give background_art instead)")
+    theme = data.get("theme", {})
+    allowed = {"title_plate": "rgb", "label_plate": "rgb", "label_ink": "hex"}
+    if not isinstance(theme, dict):
+        raise SourceError("$.theme: expected an object")
+    for key, val in theme.items():
+        if key not in allowed:
+            raise SourceError(f"$.theme.{key}: unknown key; use one of {tuple(allowed)}")
+        ok = (
+            isinstance(val, list) and len(val) == 3 and all(isinstance(c, int) and 0 <= c <= 255 for c in val)
+            if allowed[key] == "rgb"
+            else isinstance(val, str) and len(val) == 7 and val[0] == "#" and all(c in "0123456789abcdefABCDEF" for c in val[1:])
+        )
+        if not ok:
+            raise SourceError(f"$.theme.{key}: expected {'[r, g, b] with values 0-255' if allowed[key] == 'rgb' else '#rrggbb'}")
     dp = _req(data, "detachment_points", int, w)
     if dp < 0:
         raise SourceError("$.detachment_points: must be >= 0")
@@ -209,6 +225,7 @@ def parse(data: dict, base: Path) -> Detachment:
         keywords=tuple(keywords),
         in_play_parts=tuple(texts["in_play"]),
         faction_icon=_art(data["faction_icon"], "$.faction_icon", base) if "faction_icon" in data else None,
+        theme=dict(theme),
         source=data.get("source", {}),
         source_dir=base,
     )

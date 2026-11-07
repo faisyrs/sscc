@@ -44,6 +44,10 @@ C = {
     "splat": "#a3170f",
     "guide": "#00b7ff",
 }
+# Theme keys a detachment file may set, and the palette entries they replace.
+# The phase ribbons and the CP badge keep their colours on every card, because the colours carry meaning.
+THEME_KEYS = {"title_plate": "red", "label_plate": "yellow", "label_ink": "label_ink"}
+
 MIN_BODY = 1.5  # mm; Barlow is narrower than DejaVu, so it needs a slightly larger minimum
 MIN_LABEL = 1.8
 
@@ -102,6 +106,9 @@ class Kit:
         # Where panel surfaces go. Over background art they move to the borders
         # layer, so the background layer holds only the art.
         self.surface = "background"
+        # Colours: the style's palette with the detachment's theme laid over it.
+        theme = {THEME_KEYS[key]: (tuple(v) if isinstance(v, list) else v) for key, v in d.theme.items()}
+        self.c = {**C, "label_ink": C["ink"], **theme}
 
     def seed(self, key):
         return tex.seed_of(self.d.id, self.size.name, key)
@@ -270,7 +277,7 @@ def _setup(k: Kit):
     # Top row: title plate, faction plate, faction icon.
     icon_w = th if d.faction_icon else 0.0
     title_w = (rw - icon_w - (gap if icon_w else 0)) * 0.56
-    k.plate("title", rx, cy, title_w, th, C["red"], c=1.2, chip=0.16, sw=0.6)
+    k.plate("title", rx, cy, title_w, th, k.c["red"], c=1.2, chip=0.16, sw=0.6)
     for px_ in (rx + 1.3, rx + title_w - 1.3):
         for py_ in (cy + 1.3, cy + th - 1.3):
             k.rivet(px_, py_, 0.42)
@@ -282,7 +289,7 @@ def _setup(k: Kit):
     )
     tw_ = tx.line_width(title, tsize, DISPLAY)
     cap = tx.cap_height(DISPLAY["regular"]) * tsize
-    k.scuff("title", rx + title_w / 2 - tw_ / 2, cy + th / 2 - cap / 2, rx + title_w / 2 + tw_ / 2, cy + th / 2 + cap / 2, _hex(C["red"]))
+    k.scuff("title", rx + title_w / 2 - tw_ / 2, cy + th / 2 - cap / 2, rx + title_w / 2 + tw_ / 2, cy + th / 2 + cap / 2, _hex(k.c["red"]))
 
     ix = rx + title_w + gap
     iw = rx + rw - icon_w - (gap if icon_w else 0) - ix
@@ -370,7 +377,7 @@ def _setup_over_background(k: Kit):
 
     # Left column: title plate, then the faction plate (and icon, if any).
     th = ch * 0.5
-    k.plate("title", cx, cy, col, th, C["red"], c=1.2, chip=0.16, sw=0.6)
+    k.plate("title", cx, cy, col, th, k.c["red"], c=1.2, chip=0.16, sw=0.6)
     for px_ in (cx + 1.3, cx + col - 1.3):
         for py_ in (cy + 1.3, cy + th - 1.3):
             k.rivet(px_, py_, 0.42)
@@ -382,7 +389,7 @@ def _setup_over_background(k: Kit):
     )
     tw_ = tx.line_width(title, tsize, DISPLAY)
     cap = tx.cap_height(DISPLAY["regular"]) * tsize
-    k.scuff("title", cx + col / 2 - tw_ / 2, cy + th / 2 - cap / 2, cx + col / 2 + tw_ / 2, cy + th / 2 + cap / 2, _hex(C["red"]))
+    k.scuff("title", cx + col / 2 - tw_ / 2, cy + th / 2 - cap / 2, cx + col / 2 + tw_ / 2, cy + th / 2 + cap / 2, _hex(k.c["red"]))
 
     iy = cy + th + gap
     ih = cy + ch - iy
@@ -427,12 +434,12 @@ def _setup_over_background(k: Kit):
 
 
 def _tab(k: Kit, key, x_mid, y_edge, label, h, w):
-    """A yellow label plate straddling a panel's top edge."""
+    """A label plate (yellow unless the theme says otherwise) straddling a panel's top edge."""
     y = y_edge - h * 0.32
-    k.plate(key, x_mid - w / 2, y, w, h, C["yellow"], c=0.6)
+    k.plate(key, x_mid - w / 2, y, w, h, k.c["yellow"], c=0.6)
     line = tx.plain(label)
     size = tx.fit_line(line, w - 3, h * 0.66, MIN_LABEL, key, LABEL)
-    k.label(x_mid, y + h / 2, line, size, C["ink"], "middle", key)
+    k.label(x_mid, y + h / 2, line, size, k.c["label_ink"], "middle", key)
 
 
 def _min_width(paragraphs, size, max_lines, hi):
@@ -497,8 +504,8 @@ def _in_play(k: Kit):
     ph_ = sh * 0.6
     px_ = cx + 2.0 + icon * 0.7
     pw_ = tx.line_width(name, nsize, DISPLAY) + 5
-    k.plate("strip-name", px_, cy + (sh - ph_) / 2, pw_, ph_, C["yellow"], c=1.0, sw=0.5)
-    k.label(px_ + pw_ / 2, cy + sh / 2, name, nsize, C["ink"], "middle", "rule_name", DISPLAY)
+    k.plate("strip-name", px_, cy + (sh - ph_) / 2, pw_, ph_, k.c["yellow"], c=1.0, sw=0.5)
+    k.label(px_ + pw_ / 2, cy + sh / 2, name, nsize, k.c["label_ink"], "middle", "rule_name", DISPLAY)
 
     parts = [content.paragraphs(p, kw) for p in d.in_play_parts]
     col_x0, col_x1 = px_ + pw_ + 3.0, cx + cw - 3.0
@@ -525,8 +532,8 @@ def _in_play(k: Kit):
         k.panel(f"strat-{s.id}", x, py, pw, ph)
         k.picture(s.art, x + 1.0, py + 1.0, art_w, ph - 2.0)
         hy = py + 1.1
-        k.plate(f"strat-{s.id}-name", t0, hy, tw - plan.cp_w - 0.6, HEAD_H, C["yellow"], c=0.6)
-        k.label(t0 + 1.2, hy + HEAD_H / 2, nm, plan.name_size, C["ink"], "start", f"{s.id}.name")
+        k.plate(f"strat-{s.id}-name", t0, hy, tw - plan.cp_w - 0.6, HEAD_H, k.c["yellow"], c=0.6)
+        k.label(t0 + 1.2, hy + HEAD_H / 2, nm, plan.name_size, k.c["label_ink"], "start", f"{s.id}.name")
         bx = t0 + tw - plan.cp_w
         k.plate(f"strat-{s.id}-cp", bx, hy, plan.cp_w, HEAD_H, C["badge"], c=0.6, chip=0.1)
         cp = tx.plain(content.cp_label(s))
