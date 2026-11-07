@@ -70,7 +70,7 @@ Copy `detachments/orks-kult-of-speed/` and edit `detachment.json`:
 - `upgrade` (optional): `{ "extra_cp": 1, "text": "..." }` for the app's "Or: ... +1CP". The badge then reads `1/2 CP` and the body ends with `OR (+1CP): ...`.
 - `detachment_rule.parts[]` with `display_context: "setup"` is optional. Without one, the setup side shows the rule's full text.
 - Art with a transparent background is detected automatically. It is trimmed to its visible edges, fitted whole into its slot, and drawn without a frame.
-- The grunge style tries a few panel widths and art sizes for the stratagem row and keeps the one that gives the largest text. Equal panels and large art are kept unless changing them makes the text noticeably bigger.
+- The grunge style tries a few panel widths and art sizes for the stratagem row and keeps the one that gives the largest text. All panels get the same art width. Larger art wins, then equal panels, unless the alternative makes the text noticeably bigger. Portrait art at about 5:7 (for example 700 × 1000 px) fills the art slot.
 - A source missing a required field, such as `orks-wreckas` until its detachment page is transcribed, fails the build with the field's JSON path.
 - `keywords[]`: exact phrases drawn in bold wherever they appear. Keywords in square brackets, such as `[ASSAULT]`, are weapon abilities; grunge draws them in red.
 - `faction_icon` (optional): shown at the top right of the grunge setup side. Without it, the faction plate takes the space.

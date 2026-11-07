@@ -48,7 +48,7 @@
       "target": "That MEGANOBZ/NOBZ unit.",
       "effect": "Ranged attacks that target your unit with a S greater than your unit’s T have -1 to wound rolls.",
       "upgrade": { "extra_cp": 1, "text": "Ranged attacks that target your unit have -1 to wound rolls." },
-      "art": { "file": "art/hulking-brutes.png", "crop": [0.0, 0.0, 0.94, 1.0] }
+      "art": { "file": "art/hulking-brutes.png" }
     },
     {
       "id": "too-arrogant-to-die",

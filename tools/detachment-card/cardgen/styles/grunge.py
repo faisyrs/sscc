@@ -454,7 +454,7 @@ def _in_play(k: Kit):
 
 HEAD_H, RIB_H = 4.4, 3.0
 BODY_TOP = 1.1 + HEAD_H + 0.6 + RIB_H + 0.9  # from the panel's top edge to the top of the body text
-ART_FRACTIONS = (0.31, 0.26, 0.21)  # share of a panel's width given to its art, largest first
+ART_FRACTIONS = (0.33, 0.31, 0.26, 0.21)  # art width as a share of an equal panel's width, largest first
 WIDTH_EXPONENTS = (0.0, 0.5, 1.0)  # 0 = equal panels; 1 = panel width in proportion to body length
 
 
@@ -477,10 +477,11 @@ def _plan_panels(d: Detachment, cx, cw, ph, gap) -> PanelPlan:
 
     Every combination of ART_FRACTIONS and WIDTH_EXPONENTS is tried. The plan
     with the largest common body size wins, compared in 0.1 mm bands. Within a
-    band, the earlier candidate wins: equal panels before unequal ones, and
-    larger art before smaller. Equal panels and large art are kept unless
-    changing them makes the text noticeably bigger. The order is fixed, so
-    the choice is deterministic."""
+    band, the earlier candidate wins: larger art first, then equal panels
+    before unequal ones. So the art stays as big as possible unless shrinking
+    it makes the text noticeably bigger. The order is fixed, so the choice is
+    deterministic. At 0.33 of an equal share, portrait art (about 5:7) fills
+    the full height of the slot."""
     kw = d.keywords
     n = len(d.stratagems)
     bodies = [content.body(s, kw) for s in d.stratagems]
@@ -491,7 +492,7 @@ def _plan_panels(d: Detachment, cx, cw, ph, gap) -> PanelPlan:
     lengths = [sum(tx.line_width(w, 1.0, BODY) for para in b for w in para) for b in bodies]
     avail = cw - gap * (n - 1)
     best, best_band, last_error = None, -1, None
-    for exp in WIDTH_EXPONENTS:
+    def panel_widths(exp):
         weights = [l**exp for l in lengths]
         widths = [avail * w / sum(weights) for w in weights]
         lo = avail / n * 0.7  # no panel narrower than 70% of an equal share
@@ -499,8 +500,13 @@ def _plan_panels(d: Detachment, cx, cw, ph, gap) -> PanelPlan:
             short = sum(lo - w for w in widths if w < lo)
             rest = sum(w for w in widths if w >= lo)
             widths = [lo if w < lo else w - short * w / rest for w in widths]
-        for frac in ART_FRACTIONS:
-            art_ws = [min(w * frac, ph - 2.0) for w in widths]
+        return widths
+
+    for frac in ART_FRACTIONS:
+        for exp in WIDTH_EXPONENTS:
+            widths = panel_widths(exp)
+            # Every panel gets the same art width, so the pictures match even when the panels don't.
+            art_ws = [min(avail / n * frac, ph - 2.0)] * n
             tws = [w - a - 4.0 for w, a in zip(widths, art_ws)]
             try:
                 size = min(
