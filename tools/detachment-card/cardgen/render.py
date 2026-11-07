@@ -16,7 +16,7 @@ from psd_tools import PSDImage
 from psd_tools.api.layers import PixelLayer
 
 from . import text as tx
-from .layout import HIDDEN_LAYERS, LAYERS, Circle, Picture, Rect, Scene, Stroke, Text
+from .scene import HIDDEN_LAYERS, LAYERS, Bitmap, Circle, Picture, Poly, Rect, Scene, Stroke, Text
 
 DPI = 300
 
@@ -53,6 +53,46 @@ def _prepared_png(path, crop, w_px: int, h_px: int) -> bytes:
         return buf.getvalue()
 
 
+_BITMAPS: dict = {}
+
+
+def _bitmap_png(key, w_px, h_px, make) -> bytes:
+    k = (key, w_px, h_px)
+    if k not in _BITMAPS:
+        buf = io.BytesIO()
+        make(w_px, h_px).save(buf, "PNG", optimize=False, compress_level=6)
+        _BITMAPS[k] = buf.getvalue()
+    return _BITMAPS[k]
+
+
+def _text_paths(p: Text, dx=0.0, dy=0.0) -> list[tuple[str, str]]:
+    """(kind, path data) for each run of the line."""
+    x = p.left() + dx
+    out = []
+    for run, kind in p.line:
+        font = p.face[kind]
+        out.append((kind, tx.outline(run, x, p.y + dy, p.size, font, p.skew)))
+        x += tx.width(run, p.size, font)
+    return out
+
+
+def _text(p: Text) -> str:
+    """A line of text as outlines. The <title> keeps the wording searchable and
+    readable in editors; the paths are what gets drawn."""
+    parts = []
+    if p.shadow:
+        d = " ".join(c for _, c in _text_paths(p, p.shadow_dx, p.shadow_dy) if c)
+        parts.append(f'<path fill="{p.shadow}" stroke="{p.shadow}" stroke-width="{_n(p.outline_w)}" stroke-linejoin="round" d="{d}"/>')
+    runs = _text_paths(p)
+    if p.outline:
+        d = " ".join(c for _, c in runs if c)
+        parts.append(f'<path fill="{p.outline}" stroke="{p.outline}" stroke-width="{_n(p.outline_w * 2)}" stroke-linejoin="round" d="{d}"/>')
+    for kind, d in runs:
+        if d:
+            parts.append(f'<path fill="{p.colors.get(kind, p.color)}" d="{d}"/>')
+    return f'<g data-block="{escape(p.block)}"><title>{escape(tx.line_text(p.line))}</title>{"".join(parts)}</g>'
+
+
 def _element(p) -> str:
     if isinstance(p, Rect):
         extra = f' stroke-dasharray="{p.dash}"' if p.dash else ""
@@ -75,18 +115,20 @@ def _element(p) -> str:
             f'<image x="{_n(p.x)}" y="{_n(p.y)}" width="{_n(p.w)}" height="{_n(p.h)}" '
             f'preserveAspectRatio="none" xlink:href="data:image/png;base64,{b64}"><title>{escape(p.art.path.name)}</title></image>'
         )
-    if isinstance(p, Text):
-        total = tx.line_width(p.line, p.size)
-        x = p.x - {"start": 0, "middle": total / 2, "end": total}[p.anchor]
-        d = []
-        for run, bold in p.line:
-            d.append(tx.outline(run, x, p.y, p.size, bold))
-            x += tx.width(run, p.size, bold)
-        # The <title> keeps the wording searchable and readable in editors; the path is what gets drawn.
+    if isinstance(p, Poly):
+        pts = " ".join(f"{_n(x)},{_n(y)}" for x, y in p.points)
+        tag = "polygon" if p.closed else "polyline"
+        op = f' opacity="{_n(p.opacity)}"' if p.opacity != 1 else ""
+        return f'<{tag} points="{pts}" fill="{p.fill}" stroke="{p.stroke}" stroke-width="{_n(p.sw)}" stroke-linejoin="round"{op}/>'
+    if isinstance(p, Bitmap):
+        w_px, h_px = px(p.w), px(p.h)
+        b64 = base64.b64encode(_bitmap_png(p.key, w_px, h_px, p.make)).decode()
         return (
-            f'<path data-block="{escape(p.block)}" fill="{p.color}" d="{" ".join(c for c in d if c)}">'
-            f"<title>{escape(tx.line_text(p.line))}</title></path>"
+            f'<image x="{_n(p.x)}" y="{_n(p.y)}" width="{_n(p.w)}" height="{_n(p.h)}" '
+            f'preserveAspectRatio="none" xlink:href="data:image/png;base64,{b64}"/>'
         )
+    if isinstance(p, Text):
+        return _text(p)
     raise TypeError(p)
 
 

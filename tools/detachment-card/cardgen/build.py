@@ -12,13 +12,14 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def build(source: str | Path, out_dir: str | Path, sizes=("full", "sticker"), sides=layout.SIDES, psd=True, png=True) -> dict:
+def build(source: str | Path, out_dir: str | Path, sizes=("full", "sticker"), sides=layout.SIDES, psd=True, png=True, style=layout.DEFAULT_STYLE) -> dict:
     d = model.load(source)
     out = Path(out_dir) / d.id
     out.mkdir(parents=True, exist_ok=True)
     report = {
         "detachment": d.id,
         "source_file": Path(source).name,
+        "style": style,
         "source_verified": bool(d.source.get("verified_against_source", False)),
         "stratagem_order": [s.id for s in d.stratagems],
         "layers": list(layout.LAYERS),
@@ -28,8 +29,8 @@ def build(source: str | Path, out_dir: str | Path, sizes=("full", "sticker"), si
     for size_name in sizes:
         size = layout.SIZES[size_name]
         for side in sides:
-            scene = layout.build(d, size, side)
-            stem = f"{d.id}_{side}_{size_name}"
+            scene = layout.build(d, size, side, style)
+            stem = f"{d.id}_{style}_{side}_{size_name}"
             files = {}
             svg_path = out / f"{stem}.svg"
             svg_path.write_text(render.layered_svg(scene), encoding="utf-8")
@@ -48,5 +49,5 @@ def build(source: str | Path, out_dir: str | Path, sizes=("full", "sticker"), si
                 "font_sizes_mm": dict(sorted(scene.fits.items())),
                 "files": {k: {"name": p.name, "sha256": _sha(p)} for k, p in files.items()},
             }
-    (out / "build_report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    (out / f"build_report_{style}.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return report

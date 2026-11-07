@@ -1,0 +1,463 @@
+"""Grunge style: riveted, worn metal plates, parchment panels, hazard-striped
+ends and heavy italic display type. On the full-size print the outline has
+the token's 1-inch notches cut into it.
+
+Every surface texture is generated from a seed made of the detachment id and
+the element's name, so builds repeat exactly.
+"""
+from __future__ import annotations
+
+import math
+import random
+
+from .. import text as tx
+from .. import textures as tex
+from ..geometry import INCH, NOTCH_BASE, NOTCH_DEPTH, SIZES, Size
+from ..model import Detachment
+from ..scene import Bitmap, Circle, Picture, Poly, Rect, Scene, Stroke, Text
+
+BODY = {"regular": "barlow-body", "bold": "barlow-body-bold", "ability": "barlow-body-bold"}
+LABEL = tx.face("barlow-label")
+LABEL_SEMI = tx.face("barlow-label-semi")
+DISPLAY = tx.face("barlow-display")
+BODY_LEADING = 1.13
+
+C = {
+    "ink": "#17130f",
+    "ability": "#9b1b14",
+    "steel_edge": "#1a1612",
+    "steel_hi": "#a69a84",
+    "seam": "#0f0d0b",
+    "rivet": ("#1d1916", "#7b7264", "#d6cdb9"),
+    "yellow": (240, 196, 28),
+    "red": (158, 31, 23),
+    "badge": (150, 26, 20),
+    "light_metal": (196, 190, 178),
+    "title_text": "#f2ebdf",
+    "title_outline": "#140f0c",
+    "title_shadow": "#2a0c08",
+    "cream": "#fbf3e2",
+    "ribbon": {"your": (31, 79, 143), "opponent": (140, 29, 24), "either": (47, 107, 58)},
+    "bolt": "#f0c419",
+    "splat": "#a3170f",
+    "guide": "#00b7ff",
+}
+MIN_BODY = 1.5  # mm; Barlow is narrower than DejaVu, so it needs a slightly larger minimum
+MIN_LABEL = 1.8
+
+
+def _hex(rgb) -> str:
+    return "#%02x%02x%02x" % tuple(rgb)
+
+
+# ---- shapes -----------------------------------------------------------------
+
+
+def chamfer(x, y, w, h, c):
+    c = min(c, w / 2, h / 2)
+    return ((x + c, y), (x + w - c, y), (x + w, y + c), (x + w, y + h - c), (x + w - c, y + h), (x + c, y + h), (x, y + h - c), (x, y + c))
+
+
+def banner(x, y, w, h):
+    """A ribbon with V-cut ends."""
+    k = h * 0.35
+    return ((x, y), (x + w, y), (x + w - k, y + h / 2), (x + w, y + h), (x, y + h), (x + k, y + h / 2))
+
+
+def silhouette(size: Size, c: float):
+    """The outer outline. On the full size the long edges get the token's notches."""
+    W, H = size.width, size.height
+    stations = [i * INCH for i in range(1, 8)] if size.notched else []
+    top = [(c, 0.0)]
+    for x in stations:
+        top += [(x - NOTCH_BASE / 2, 0.0), (x, NOTCH_DEPTH), (x + NOTCH_BASE / 2, 0.0)]
+    top += [(W - c, 0.0), (W, c), (W, H - c), (W - c, H)]
+    bottom = []
+    for x in reversed(stations):
+        bottom += [(x + NOTCH_BASE / 2, H), (x, H - NOTCH_DEPTH), (x - NOTCH_BASE / 2, H)]
+    return tuple(top + bottom + [(c, H), (0.0, H - c), (0.0, c)])
+
+
+def _bitmap(key, x, y, w, h, polys, gen):
+    """A texture generated at print resolution and masked to the given polygons (in mm)."""
+
+    def make(wp, hp):
+        sx, sy = wp / w, hp / h
+        return tex.masked(gen(wp, hp), [[((px - x) * sx, (py - y) * sy) for px, py in poly] for poly in polys])
+
+    return Bitmap(x, y, w, h, key, make)
+
+
+# ---- components -------------------------------------------------------------
+
+
+class Kit:
+    """Draws the style's parts into a scene. Seeds come from the detachment id and each part's key."""
+
+    def __init__(self, scene: Scene, d: Detachment, size: Size):
+        self.s, self.d, self.size = scene, d, size
+
+    def seed(self, key):
+        return tex.seed_of(self.d.id, self.size.name, key)
+
+    def rivet(self, cx, cy, r=0.5):
+        dark, mid, hi = C["rivet"]
+        self.s.add("borders", Circle(cx, cy, r, dark), Circle(cx, cy, r * 0.74, mid), Circle(cx - r * 0.22, cy - r * 0.22, r * 0.26, hi))
+
+    def frame(self, pts, sw=0.9):
+        self.s.add("borders", Poly(pts, stroke=C["steel_edge"], sw=sw))
+
+    def panel(self, key, x, y, w, h, c=1.6, rivets=True):
+        pts = chamfer(x, y, w, h, c)
+        seed = self.seed(key)
+        self.s.add("background", _bitmap(f"{self.d.id}/{key}", x, y, w, h, [pts], lambda wp, hp: tex.parchment(wp, hp, seed)))
+        self.frame(pts)
+        self.s.add("borders", Poly(chamfer(x + 0.65, y + 0.65, w - 1.3, h - 1.3, c * 0.7), stroke=C["steel_hi"], sw=0.2, opacity=0.7))
+        if rivets:
+            for rx in (x + 1.45, x + w - 1.45):
+                for ry in (y + 1.45, y + h - 1.45):
+                    self.rivet(rx, ry, 0.42)
+
+    def plate(self, key, x, y, w, h, rgb, c=0.8, chip=0.12, pts=None, sw=0.35):
+        pts = pts or chamfer(x, y, w, h, c)
+        seed = self.seed(key)
+        self.s.add("borders", _bitmap(f"{self.d.id}/{key}", x, y, w, h, [pts], lambda wp, hp: tex.painted(wp, hp, seed, rgb, chip)))
+        self.s.add("borders", Poly(pts, stroke=C["steel_edge"], sw=sw))
+
+    def picture(self, art, x, y, w, h):
+        self.s.add("graphics", Picture(x, y, w, h, art))
+        self.s.add("borders", Poly(chamfer(x, y, w, h, 0.01), stroke=C["steel_edge"], sw=0.45))
+
+    def bolt(self, key, x, y, w, h):
+        """A lightning bolt over a paint splat, the rule's icon."""
+        rng = random.Random(f"{self.d.id}:{key}")
+        cx, cy, r = x + w * 0.45, y + h * 0.42, min(w, h) * 0.36
+        splat = []
+        for i in range(22):
+            a = i / 22 * 6.2832
+            rr = r * (0.55 + rng.random() * 0.6 if i % 2 else 0.5 + rng.random() * 0.25)
+            splat.append((cx + rr * math.cos(a), cy + rr * math.sin(a) * 0.8))
+        self.s.add("graphics", Poly(tuple(splat), fill=C["splat"], opacity=0.9))
+        for _ in range(5):
+            dx, dy = (rng.random() - 0.5) * w, (rng.random() - 0.5) * h * 0.8
+            self.s.add("graphics", Circle(cx + dx, cy + dy, r * (0.05 + rng.random() * 0.08), C["splat"]))
+        pts = ((0.62, 0.0), (0.16, 0.58), (0.44, 0.58), (0.24, 1.0), (0.88, 0.38), (0.58, 0.38), (0.80, 0.0))
+        self.s.add("graphics", Poly(tuple((x + px * w, y + py * h) for px, py in pts), fill=C["bolt"], stroke=C["ink"], sw=0.35))
+
+    def checker(self, x, y, w, h, rows=2):
+        sq = h / rows
+        cols = int(w // sq)
+        self.s.add("graphics", Rect(x, y, cols * sq, h, "#f4efe4"))
+        for r in range(rows):
+            for col in range(cols):
+                if (r + col) % 2 == 0:
+                    self.s.add("graphics", Rect(x + col * sq, y + r * sq, sq, sq, "#141210"))
+
+    # ---- text ----
+
+    def label(self, x, y_mid, line, size, color, anchor, block, fc=LABEL, **kw):
+        """One line whose capitals are centred on y_mid."""
+        base = y_mid + tx.cap_height(fc["regular"]) * size / 2
+        self.s.add("text", Text(x, base, line, size, color, anchor, block, face=fc, **kw))
+        self.s.fits[block] = size
+
+    def block(self, x, top, fit: tx.Fit, block, align="start", fc=BODY, leading=BODY_LEADING, width=0.0):
+        y = top + tx.ascent(fc["regular"]) * fit.size
+        for line in fit.lines:
+            lx = x + width / 2 if align == "middle" else x
+            self.s.add("text", Text(lx, y, line, fit.size, C["ink"], align, block, face=fc, colors={"ability": C["ability"]}))
+            y += fit.size * leading
+        self.s.fits[block] = fit.size
+
+    def scuff(self, key, x0, y0, x1, y1, color, n=34):
+        """Thin scratches over display type, in the colour of the plate behind it."""
+        rng = random.Random(f"{self.d.id}:{key}")
+        for _ in range(n):
+            x, y = rng.uniform(x0, x1), rng.uniform(y0, y1)
+            ln = rng.uniform(0.4, 2.2)
+            dy = rng.uniform(-0.35, 0.35)
+            self.s.add("text", Stroke(x, y, x + ln, y + dy, color, rng.uniform(0.06, 0.14), 0.9))
+
+
+# ---- the two sides ----------------------------------------------------------
+
+
+def _metrics(size: Size):
+    full = size.notched
+    end = 4.6 if full else 3.2  # hazard-striped ends
+    band = 3.0 if full else 2.2  # metal band along the long edges
+    cx, cy = end + 1.0, band
+    return end, band, cx, cy, size.width - 2 * cx, size.height - 2 * cy
+
+
+def _chrome(k: Kit):
+    s, d, size = k.s, k.d, k.size
+    W, H = size.width, size.height
+    end, band, *_ = _metrics(size)
+    c = 2.2 if size.notched else 1.6
+    sil = silhouette(size, c)
+    seed = k.seed("plate")
+    s.add("background", _bitmap(f"{d.id}/{size.name}/plate", 0, 0, W, H, [sil], lambda wp, hp: tex.metal(wp, hp, seed)))
+    pitch = 3.2
+    for name, x0 in (("left", 0.0), ("right", W - end)):
+        if name == "left":
+            zone = ((c, 0), (end, 0), (end, H), (c, H), (0, H - c), (0, c))
+        else:
+            zone = ((W - end, 0), (W - c, 0), (W, c), (W, H - c), (W - c, H), (W - end, H))
+        zs = k.seed(f"hazard-{name}")
+        s.add(
+            "borders",
+            _bitmap(f"{d.id}/{size.name}/hazard-{name}", x0, 0, end, H, [zone], lambda wp, hp, zs=zs: tex.hazard(wp, hp, zs, wp / end * pitch)),
+        )
+        edge = end if name == "left" else W - end
+        s.add("borders", Stroke(edge, 0, edge, H, C["seam"], 0.45))
+    # Seams across the edge bands at each inch, so the band reads as a row of plates and marks the inches.
+    offset = (SIZES["full"].width - W) / 2
+    for i in range(1, 8):
+        x = i * INCH - offset
+        for y0, y1 in ((0, band), (H - band, H)):
+            s.add("borders", Stroke(x, y0, x, y1, C["seam"], 0.35), Stroke(x + 0.3, y0, x + 0.3, y1, C["steel_hi"], 0.12, 0.6))
+    for i in range(8):
+        x = (i + 0.5) * INCH - offset
+        if end + 1 < x < W - end - 1:
+            for y in (band / 2, H - band / 2):
+                k.rivet(x, y, 0.42 if size.notched else 0.34)
+    s.add("borders", Poly(sil, stroke=C["steel_edge"], sw=0.6))
+    # Guides (a hidden layer): trim line, safe area, and the token's 1-inch notch stations.
+    s.add("guides", Poly(sil, stroke=C["guide"], sw=0.2))
+    _, _, cx, cy, cw, ch = _metrics(size)
+    s.add("guides", Rect(cx, cy, cw, ch, stroke=C["guide"], sw=0.15, dash="0.5 0.5"))
+    for i in range(1, 8):
+        x = i * INCH - offset
+        s.add("guides", Stroke(x, 0, x, 1.7, C["guide"], 0.2), Stroke(x, H - 1.7, x, H, C["guide"], 0.2))
+
+
+def _setup(k: Kit):
+    d = k.d
+    _, _, cx, cy, cw, ch = _metrics(k.size)
+    gap = 1.4
+
+    art_w = cw * 0.335
+    k.picture(d.hero_art, cx, cy, art_w, ch)
+    for rx in (cx + 1.2, cx + art_w - 1.2):
+        for ry in (cy + 1.2, cy + ch - 1.2):
+            k.rivet(rx, ry, 0.42)
+    rx = cx + art_w + gap
+    rw = cx + cw - rx
+    th = ch * 0.42
+
+    # Top row: title plate, faction plate, faction icon.
+    icon_w = th if d.faction_icon else 0.0
+    title_w = (rw - icon_w - (gap if icon_w else 0)) * 0.56
+    k.plate("title", rx, cy, title_w, th, C["red"], c=1.2, chip=0.16, sw=0.6)
+    for px_ in (rx + 1.3, rx + title_w - 1.3):
+        for py_ in (cy + 1.3, cy + th - 1.3):
+            k.rivet(px_, py_, 0.42)
+    title = tx.plain(d.name.upper())
+    tsize = tx.fit_line(title, title_w - 6, th * 0.62, 3.0, "name", DISPLAY)
+    k.label(
+        rx + title_w / 2, cy + th / 2, title, tsize, C["title_text"], "middle", "name", DISPLAY,
+        outline=C["title_outline"], outline_w=0.55, shadow=C["title_shadow"], shadow_dx=0.4, shadow_dy=0.45,
+    )
+    tw_ = tx.line_width(title, tsize, DISPLAY)
+    cap = tx.cap_height(DISPLAY["regular"]) * tsize
+    k.scuff("title", rx + title_w / 2 - tw_ / 2, cy + th / 2 - cap / 2, rx + title_w / 2 + tw_ / 2, cy + th / 2 + cap / 2, _hex(C["red"]))
+
+    ix = rx + title_w + gap
+    iw = rx + rw - icon_w - (gap if icon_w else 0) - ix
+    k.plate("info", ix, cy, iw, th, C["light_metal"], c=1.2, chip=0.08, sw=0.6)
+    for px_ in (ix + 1.3, ix + iw - 1.3):
+        for py_ in (cy + 1.3, cy + th - 1.3):
+            k.rivet(px_, py_, 0.38)
+    l1 = tx.plain(f"{d.faction.upper()}  •  DETACHMENT ({d.detachment_points} DP)")
+    l2 = tx.plain(f"FORCE DISPOSITION: {d.disposition.upper()}")
+    s1 = tx.fit_line(l1, iw - 5, th * 0.3, MIN_LABEL, "faction_points", LABEL)
+    s2 = tx.fit_line(l2, iw - 5, s1 * 0.78, MIN_LABEL, "disposition", LABEL)
+    k.label(ix + iw / 2, cy + th * 0.36, l1, s1, C["ink"], "middle", "faction_points")
+    k.label(ix + iw / 2, cy + th * 0.70, l2, s2, C["ink"], "middle", "disposition")
+    if d.faction_icon:
+        fx = rx + rw - icon_w
+        k.picture(d.faction_icon, fx, cy, icon_w, th)
+
+    # Bottom row: detachment rule name and the setup-only rule.
+    by = cy + th + gap + 1.2  # room for the tabs that sit across the panels' top edges
+    bh = cy + ch - by
+    tab_h = 4.0
+    rule_w = rw * 0.47
+    k.panel("rule", rx, by, rule_w, bh)
+    _tab(k, "rule-tab", rx + rule_w / 2, by, "DETACHMENT RULE", tab_h, rule_w * 0.62)
+    icon = bh * 0.62
+    k.bolt("rule-bolt", rx + 2.0, by + (bh - icon) / 2 + 1.0, icon * 0.8, icon)
+    name = tx.plain(d.rule_name.upper())
+    nx = rx + 2.0 + icon * 0.8 + 1.2
+    nw = rx + rule_w - 2.5 - nx
+    nsize = tx.fit_line(name, nw, bh * 0.36, 2.5, "rule_name", DISPLAY)
+    k.label(nx + nw / 2, by + tab_h * 0.4 + (bh - tab_h * 0.4) / 2, name, nsize, C["ink"], "middle", "rule_name", DISPLAY)
+
+    sx = rx + rule_w + gap
+    sw_ = rx + rw - sx
+    k.panel("setup", sx, by, sw_, bh)
+    tab_w = sw_ * 0.4
+    _tab(k, "setup-tab", sx + sw_ * 0.36, by, "SETUP ONLY", tab_h, tab_w)
+    k.checker(sx + sw_ * 0.36 + tab_w / 2 + 1.5, by - tab_h * 0.32, sw_ * 0.3, tab_h * 0.64)
+    top = by + tab_h * 0.75
+    box_w, box_h = sw_ - 6, by + bh - 1.8 - top
+    fit = tx.fit_block([tx.tokenize(d.setup_text, d.keywords)], box_w, box_h, 4.4, MIN_BODY, "setup_text", BODY, BODY_LEADING)
+    used = tx.block_height(len(fit.lines), fit.size, BODY, BODY_LEADING)
+    k.block(sx + 3, top + (box_h - used) / 2, fit, "setup_text", "middle", width=box_w)
+
+
+def _tab(k: Kit, key, x_mid, y_edge, label, h, w):
+    """A yellow label plate straddling a panel's top edge."""
+    y = y_edge - h * 0.32
+    k.plate(key, x_mid - w / 2, y, w, h, C["yellow"], c=0.6)
+    line = tx.plain(label)
+    size = tx.fit_line(line, w - 3, h * 0.66, MIN_LABEL, key, LABEL)
+    k.label(x_mid, y + h / 2, line, size, C["ink"], "middle", key)
+
+
+def _phase_label(s) -> str:
+    phase = "ANY" if s.phase == "any" else s.phase.upper()
+    if s.turn == "opponent":
+        return f"OPPONENT’S {phase} PHASE"
+    if s.turn == "either":
+        return f"{phase} PHASE • EITHER PLAYER"
+    return f"{phase} PHASE"
+
+
+def _min_width(paragraphs, size, max_lines, hi):
+    """Narrowest width (to 0.05 mm) at which the text wraps to max_lines lines or fewer."""
+    lo = 1.0
+    if not _fits_lines(paragraphs, size, hi, max_lines):
+        return None
+    while hi - lo > 0.05:
+        mid = (lo + hi) / 2
+        if _fits_lines(paragraphs, size, mid, max_lines):
+            hi = mid
+        else:
+            lo = mid
+    return hi
+
+
+def _fits_lines(paragraphs, size, w, max_lines):
+    try:
+        return len(tx.wrap(paragraphs, size, w, BODY)) <= max_lines
+    except tx.LayoutError:
+        return False
+
+
+def _has_widow(fit, w):
+    return len(fit.lines) > 1 and tx.line_width(fit.lines[-1], fit.size, BODY) < 0.3 * w
+
+
+def _balance_columns(parts, avail, box_h):
+    """Split the strip's width between the rule's parts so their line counts
+    match. Take the largest size, then the fewest lines per column. Each
+    column gets the narrowest width that holds its part in that many lines,
+    plus an equal share of what is left over. If that extra width leaves a
+    one-word last line, the columns keep their narrowest widths instead."""
+    for size in tx.size_steps(2.6, MIN_BODY):
+        max_lines = int((box_h / size - tx.ascent(BODY["regular"]) - tx.descent(BODY["regular"])) / BODY_LEADING) + 1
+        for n in range(1, max_lines + 1):
+            mins = [_min_width(p, size, n, avail) for p in parts]
+            if None in mins or sum(mins) > avail:
+                continue
+            slack = (avail - sum(mins)) / len(parts)
+            for widths in ([m + slack for m in mins], mins):
+                fits = [tx.Fit(size, tx.wrap(p, size, w, BODY)) for p, w in zip(parts, widths)]
+                if not any(_has_widow(f, w) for f, w in zip(fits, widths)):
+                    break
+            return fits, [m + slack for m in mins]
+    raise tx.LayoutError(f"in_play_text: the in-play rule does not fit the upper strip even at {MIN_BODY} mm")
+
+
+def _in_play(k: Kit):
+    d = k.d
+    _, _, cx, cy, cw, ch = _metrics(k.size)
+    gap = 1.4
+    kw = d.keywords
+
+    # Upper strip: rule name plate, then the in-play rule, one column per part.
+    sh = ch * 0.30
+    k.panel("strip", cx, cy, cw, sh)
+    icon = sh * 0.78
+    k.bolt("strip-bolt", cx + 2.0, cy + (sh - icon) / 2, icon * 0.8, icon)
+    name = tx.plain(d.rule_name.upper())
+    nsize = tx.fit_line(name, cw * 0.28, sh * 0.42, 2.0, "rule_name", DISPLAY)
+    ph_ = sh * 0.6
+    px_ = cx + 2.0 + icon * 0.7
+    pw_ = tx.line_width(name, nsize, DISPLAY) + 5
+    k.plate("strip-name", px_, cy + (sh - ph_) / 2, pw_, ph_, C["yellow"], c=1.0, sw=0.5)
+    k.label(px_ + pw_ / 2, cy + sh / 2, name, nsize, C["ink"], "middle", "rule_name", DISPLAY)
+
+    parts = [[tx.tokenize(p, kw)] for p in d.in_play_parts]
+    col_x0, col_x1 = px_ + pw_ + 3.0, cx + cw - 3.0
+    col_gap = 3.0
+    avail = col_x1 - col_x0 - col_gap * (len(parts) - 1)
+    fits, widths = _balance_columns(parts, avail, sh - 2.6)
+    x = col_x0
+    for i, (fit, w) in enumerate(zip(fits, widths)):
+        used = tx.block_height(len(fit.lines), fit.size, BODY, BODY_LEADING)
+        k.block(x, cy + (sh - used) / 2, fit, "in_play_text")
+        x += w + col_gap
+        if i < len(fits) - 1:
+            dx = x - col_gap / 2
+            k.s.add("borders", Stroke(dx, cy + 2.2, dx, cy + sh - 2.2, C["steel_edge"], 0.4))
+
+    # Lower row: one panel per stratagem, in phase order.
+    n = len(d.stratagems)
+    py = cy + sh + gap
+    ph = ch - sh - gap
+    pw = (cw - gap * (n - 1)) / n
+    art_w = min(pw * 0.31, ph - 2.0)
+    head_h, rib_h, cp_w = 4.4, 3.0, 7.4
+    tx0s = [cx + i * (pw + gap) + 1.0 + art_w + 1.6 for i in range(n)]
+    tw = (cx + pw - 1.4) - tx0s[0]
+
+    names = [tx.plain(s.name.upper()) for s in d.stratagems]
+    name_size = min(tx.fit_line(l, tw - cp_w - 2.6, head_h * 0.72, MIN_LABEL, f"{s.id}.name", LABEL) for l, s in zip(names, d.stratagems))
+    ribbons = [tx.plain(_phase_label(s)) for s in d.stratagems]
+    rib_size = min(tx.fit_line(l, tw - 4.5, rib_h * 0.7, MIN_LABEL, f"{s.id}.phase", LABEL_SEMI) for l, s in zip(ribbons, d.stratagems))
+
+    body_top_off = 1.1 + head_h + 0.6 + rib_h + 0.9
+    body_h = ph - body_top_off - 1.4
+    bodies = [
+        [tx.tokenize(s.when, kw, "WHEN:"), tx.tokenize(s.target, kw, "TARGET:"), tx.tokenize(s.effect, kw, "EFFECT:")]
+        for s in d.stratagems
+    ]
+    common = min(
+        tx.fit_block(b, tw, body_h, 2.4, MIN_BODY, f"stratagem {s.id}", BODY, BODY_LEADING).size
+        for b, s in zip(bodies, d.stratagems)
+    )
+
+    for i, (s, body, nm, rib) in enumerate(zip(d.stratagems, bodies, names, ribbons)):
+        x = cx + i * (pw + gap)
+        k.panel(f"strat-{s.id}", x, py, pw, ph)
+        k.picture(s.art, x + 1.0, py + 1.0, art_w, ph - 2.0)
+        t0 = tx0s[i]
+        hy = py + 1.1
+        k.plate(f"strat-{s.id}-name", t0, hy, tw - cp_w - 0.6, head_h, C["yellow"], c=0.6)
+        k.label(t0 + 1.2, hy + head_h / 2, nm, name_size, C["ink"], "start", f"{s.id}.name")
+        bx = t0 + tw - cp_w
+        k.plate(f"strat-{s.id}-cp", bx, hy, cp_w, head_h, C["badge"], c=0.6, chip=0.1)
+        cp = tx.plain(f"{s.cp} CP")
+        k.label(bx + cp_w / 2, hy + head_h / 2, cp, tx.fit_line(cp, cp_w - 1.6, head_h * 0.72, MIN_LABEL, f"{s.id}.cp", LABEL), C["cream"], "middle", f"{s.id}.cp")
+        ry = hy + head_h + 0.6
+        rx_, rw_ = t0 + 0.6, tw - 1.2
+        k.plate(f"strat-{s.id}-ribbon", rx_, ry, rw_, rib_h, C["ribbon"][s.turn], pts=banner(rx_, ry, rw_, rib_h), chip=0.06, sw=0.25)
+        k.label(rx_ + rw_ / 2, ry + rib_h / 2, rib, rib_size, "#ffffff", "middle", f"{s.id}.phase", LABEL_SEMI)
+        fit = tx.Fit(common, tx.wrap(body, common, tw, BODY))
+        k.block(t0, py + body_top_off, fit, f"{s.id}.body")
+
+
+def safe_area(size: Size):
+    _, _, cx, cy, cw, ch = _metrics(size)
+    return (cx, cy, cx + cw, cy + ch)
+
+
+def build(d: Detachment, size: Size, side: str) -> Scene:
+    scene = Scene(size.width, size.height)
+    k = Kit(scene, d, size)
+    _chrome(k)
+    (_setup if side == "setup" else _in_play)(k)
+    return scene

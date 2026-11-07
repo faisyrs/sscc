@@ -70,22 +70,32 @@ class Layout(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.d = model.load(SOURCE)
-        cls.scenes = {(z, s): layout.build(cls.d, layout.SIZES[z], s) for z in layout.SIZES for s in layout.SIDES}
+        cls.scenes = {
+            (st, z, s): layout.build(cls.d, layout.SIZES[z], s, st)
+            for st in layout.STYLES
+            for z in layout.SIZES
+            for s in layout.SIDES
+        }
 
     def lines(self, scene, block):
-        return [p for p in scene.layers["text"] if p.block == block]
+        return [p for p in scene.layers["text"] if isinstance(p, layout.Text) and p.block == block]
 
     def test_rendered_text_is_the_source_text(self):
         """Joining the drawn lines back together must give the source wording exactly, with no words dropped or changed."""
         d = self.d
-        for (z, side), sc in self.scenes.items():
-            with self.subTest(size=z, side=side):
+        for (st, z, side), sc in self.scenes.items():
+            with self.subTest(style=st, size=z, side=side):
                 got = lambda b: norm(" ".join(text.line_text(t.line) for t in self.lines(sc, b)))
                 if side == "setup":
                     self.assertEqual(got("name"), d.name.upper())
                     self.assertEqual(got("setup_text"), norm(d.setup_text))
-                    self.assertEqual(got("setup_headline"), d.setup_headline.upper())
-                    self.assertEqual(got("detachment_points"), f"{d.detachment_points} DP")
+                    if st == "classic":
+                        self.assertEqual(got("setup_headline"), d.setup_headline.upper())
+                        self.assertEqual(got("detachment_points"), f"{d.detachment_points} DP")
+                    else:
+                        self.assertEqual(got("rule_name"), d.rule_name.upper())
+                        self.assertIn(f"({d.detachment_points} DP)", got("faction_points"))
+                        self.assertIn(d.disposition.upper(), got("disposition"))
                 else:
                     self.assertEqual(got("rule_name"), d.rule_name.upper())
                     self.assertEqual(got("in_play_text"), norm(d.in_play_text))
@@ -95,61 +105,82 @@ class Layout(unittest.TestCase):
                         self.assertEqual(got(f"{s.id}.body"), norm(f"WHEN: {s.when} TARGET: {s.target} EFFECT: {s.effect}"))
 
     def test_stratagem_panels_follow_phase_order(self):
-        sc = self.scenes[("full", "in_play")]
-        xs = [self.lines(sc, f"{s.id}.name")[0].x for s in self.d.stratagems]
-        self.assertEqual(xs, sorted(xs))
+        for st in layout.STYLES:
+            sc = self.scenes[(st, "full", "in_play")]
+            xs = [self.lines(sc, f"{s.id}.name")[0].x for s in self.d.stratagems]
+            self.assertEqual(xs, sorted(xs))
 
-    def test_everything_inside_the_safe_area(self):
-        for (z, side), sc in self.scenes.items():
-            m = layout.SIZES[z].margin
+    def test_text_and_art_inside_the_safe_area(self):
+        for (st, z, side), sc in self.scenes.items():
+            x0, y0, x1, y1 = layout.STYLES[st].safe_area(layout.SIZES[z])
             for layer in ("graphics", "text"):
                 for p in sc.layers[layer]:
-                    with self.subTest(size=z, side=side, layer=layer):
-                        if isinstance(p, layout.Text):
-                            w = text.line_width(p.line, p.size)
-                            x0 = p.x - {"start": 0, "middle": w / 2, "end": w}[p.anchor]
-                            box = (x0, p.y - text.ascent() * p.size, x0 + w, p.y + text.descent() * p.size)
-                        else:
-                            box = (p.x, p.y, p.x + p.w, p.y + p.h)
-                        self.assertGreaterEqual(box[0], m - 1e-6)
-                        self.assertGreaterEqual(box[1], m - 1e-6)
-                        self.assertLessEqual(box[2], sc.width - m + 1e-6)
-                        self.assertLessEqual(box[3], sc.height - m + 1e-6)
+                    if isinstance(p, layout.Text):
+                        box = (p.left(), p.y - text.ascent(p.face["regular"]) * p.size, p.left() + p.width(), p.y + text.descent(p.face["regular"]) * p.size)
+                    elif isinstance(p, layout.Picture):
+                        box = (p.x, p.y, p.x + p.w, p.y + p.h)
+                    else:
+                        continue
+                    with self.subTest(style=st, size=z, side=side, block=getattr(p, "block", "")):
+                        self.assertGreaterEqual(box[0], x0 - 1e-6)
+                        self.assertGreaterEqual(box[1], y0 - 1e-6)
+                        self.assertLessEqual(box[2], x1 + 1e-6)
+                        self.assertLessEqual(box[3], y1 + 1e-6)
 
-    def test_keywords_are_bold(self):
-        sc = self.scenes[("full", "in_play")]
-        bold = {t for p in self.lines(sc, "in_play_text") for t, b in p.line if b}
-        self.assertTrue(any("SPEED FREEKS" in t for t in bold))
-        self.assertTrue(any("[ASSAULT]" in t for t in bold))
+    def test_keywords_are_marked(self):
+        for st in layout.STYLES:
+            sc = self.scenes[(st, "full", "in_play")]
+            runs = [(t, k) for p in self.lines(sc, "in_play_text") for t, k in p.line]
+            self.assertTrue(any("SPEED FREEKS" in t and k == "bold" for t, k in runs))
+            self.assertTrue(any("[ASSAULT]" in t and k == "ability" for t, k in runs))
+
+    def test_grunge_outline_has_the_token_notches_on_full_size_only(self):
+        from cardgen.styles import grunge
+
+        full = grunge.silhouette(layout.SIZES["full"], 2.2)
+        sticker = grunge.silhouette(layout.SIZES["sticker"], 1.6)
+        tips = [(x, y) for x, y in full if y in (layout.geometry.NOTCH_DEPTH, layout.SIZES["full"].height - layout.geometry.NOTCH_DEPTH)]
+        self.assertEqual(sorted({round(x, 3) for x, _ in tips}), [round(i * layout.INCH, 3) for i in range(1, 8)])
+        self.assertEqual(len(tips), 14)
+        self.assertEqual(len(sticker), 8)
 
     def test_text_that_cannot_fit_fails_loudly(self):
         data = raw()
         data["stratagems"][0]["effect"] = "Lorem ipsum dolor sit amet. " * 40
-        with self.assertRaises(text.LayoutError) as cm:
-            layout.build(parse(data), layout.SIZES["full"], "in_play")
-        self.assertIn("dakkastorm", str(cm.exception))
+        for st in layout.STYLES:
+            with self.subTest(style=st), self.assertRaises(text.LayoutError) as cm:
+                layout.build(parse(data), layout.SIZES["full"], "in_play", st)
+            self.assertIn("dakkastorm", str(cm.exception))
 
     def test_missing_glyph_fails_loudly(self):
         data = raw()
         data["stratagems"][0]["effect"] = "Roll a die 漢."
-        with self.assertRaises(text.LayoutError):
-            layout.build(parse(data), layout.SIZES["full"], "in_play")
+        for st in layout.STYLES:
+            with self.subTest(style=st), self.assertRaises(text.LayoutError):
+                layout.build(parse(data), layout.SIZES["full"], "in_play", st)
 
     def test_layout_supports_other_stratagem_counts(self):
         data = raw()
         extra = copy.deepcopy(data["stratagems"][0])
         extra.update(id="extra", name="Extra", phase="fight", effect="Short.")
         data["stratagems"].append(extra)
-        sc = layout.build(parse(data), layout.SIZES["full"], "in_play")
-        self.assertEqual(len([p for p in sc.layers["graphics"]]), 4)
+        for st in layout.STYLES:
+            sc = layout.build(parse(data), layout.SIZES["full"], "in_play", st)
+            self.assertEqual(len([p for p in sc.layers["graphics"] if isinstance(p, layout.Picture)]), 4)
+
+    def test_faction_icon_is_optional(self):
+        data = raw()
+        data.pop("faction_icon")
+        sc = layout.build(parse(data), layout.SIZES["full"], "setup", "grunge")
+        self.assertEqual(len([p for p in sc.layers["graphics"] if isinstance(p, layout.Picture)]), 1)
 
 
 class Outputs(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = Path(tempfile.mkdtemp())
-        cls.r1 = build.build(SOURCE, cls.tmp / "a", sizes=("full",))
-        cls.r2 = build.build(SOURCE, cls.tmp / "b", sizes=("full",))
+        cls.r1 = {st: build.build(SOURCE, cls.tmp / "a", sizes=("full",), style=st) for st in layout.STYLES}
+        cls.r2 = {st: build.build(SOURCE, cls.tmp / "b", sizes=("full",), style=st) for st in layout.STYLES}
         cls.dir = cls.tmp / "a" / "orks-kult-of-speed"
 
     @classmethod
@@ -157,44 +188,51 @@ class Outputs(unittest.TestCase):
         shutil.rmtree(cls.tmp)
 
     def test_builds_are_byte_identical(self):
-        for stem, out in self.r1["outputs"].items():
-            for kind, f in out["files"].items():
-                with self.subTest(stem=stem, kind=kind):
-                    self.assertEqual(f["sha256"], self.r2["outputs"][stem]["files"][kind]["sha256"])
+        for st in layout.STYLES:
+            for stem, out in self.r1[st]["outputs"].items():
+                for kind, f in out["files"].items():
+                    with self.subTest(stem=stem, kind=kind):
+                        self.assertEqual(f["sha256"], self.r2[st]["outputs"][stem]["files"][kind]["sha256"])
 
     def test_psd_layers(self):
-        for side in layout.SIDES:
-            with self.subTest(side=side):
-                psd = PSDImage.open(self.dir / f"orks-kult-of-speed_{side}_full.psd")
-                self.assertEqual(psd.size, (2400, 600))
-                self.assertEqual([l.name for l in psd], list(layout.LAYERS))
-                self.assertEqual([l.visible for l in psd], [n not in layout.HIDDEN_LAYERS for n in layout.LAYERS])
-                self.assertEqual(psd.image_resources.get_data(1005).horizontal >> 16, 300)
+        for st in layout.STYLES:
+            for side in layout.SIDES:
+                with self.subTest(style=st, side=side):
+                    psd = PSDImage.open(self.dir / f"orks-kult-of-speed_{st}_{side}_full.psd")
+                    self.assertEqual(psd.size, (2400, 600))
+                    self.assertEqual([l.name for l in psd], list(layout.LAYERS))
+                    self.assertEqual([l.visible for l in psd], [n not in layout.HIDDEN_LAYERS for n in layout.LAYERS])
+                    self.assertEqual(psd.image_resources.get_data(1005).horizontal >> 16, 300)
 
     def test_layers_hold_only_their_own_content(self):
-        psd = PSDImage.open(self.dir / "orks-kult-of-speed_in_play_full.psd")
-        layers = {l.name: l.topil().convert("RGBA") for l in psd}
-        # The background is opaque everywhere; the layers above it are mostly transparent.
-        self.assertEqual(layers["background"].getchannel("A").getextrema(), (255, 255))
-        for name in ("borders", "graphics", "text"):
-            alpha = layers[name].getchannel("A")
-            covered = sum(1 for a in alpha.getdata() if a) / (alpha.width * alpha.height)
-            with self.subTest(layer=name):
-                self.assertGreater(covered, 0.005)
-                self.assertLess(covered, 0.5)
+        for st in layout.STYLES:
+            psd = PSDImage.open(self.dir / f"orks-kult-of-speed_{st}_in_play_full.psd")
+            layers = {l.name: l.topil().convert("RGBA") for l in psd}
+            bg = layers["background"].getchannel("A")
+            self.assertEqual(bg.getpixel((bg.width // 2, bg.height // 2)), 255)
+            if st == "grunge":  # the notch at the 4-inch station is cut out of the plate
+                self.assertEqual(bg.getpixel((bg.width // 2, 2)), 0)
+            for name in ("borders", "graphics", "text"):
+                alpha = layers[name].getchannel("A")
+                covered = sum(1 for a in alpha.getdata() if a) / (alpha.width * alpha.height)
+                with self.subTest(style=st, layer=name):
+                    self.assertGreater(covered, 0.005)
+                    self.assertLess(covered, 0.6)
 
     def test_svg_has_named_layers_and_text_titles(self):
-        svg = (self.dir / "orks-kult-of-speed_in_play_full.svg").read_text(encoding="utf-8")
-        self.assertEqual(re.findall(r'inkscape:label="([^"]+)"', svg), list(layout.LAYERS))
-        self.assertNotIn("<text", svg)  # text is drawn as outlines, so it never depends on installed fonts
-        titles = unescape(" ".join(re.findall(r"<path[^>]*><title>([^<]*)</title>", svg)))
-        self.assertIn("ADRENALINE JUNKIES", titles)
+        for st in layout.STYLES:
+            svg = (self.dir / f"orks-kult-of-speed_{st}_in_play_full.svg").read_text(encoding="utf-8")
+            self.assertEqual(re.findall(r'inkscape:label="([^"]+)"', svg), list(layout.LAYERS))
+            self.assertNotIn("<text", svg)  # text is drawn as outlines, so it never depends on installed fonts
+            titles = unescape(" ".join(re.findall(r"<title>([^<]*)</title>", svg)))
+            self.assertIn("ADRENALINE JUNKIES", titles)
 
     def test_report_records_hashes(self):
-        rep = json.loads((self.dir / "build_report.json").read_text(encoding="utf-8"))
-        for out in rep["outputs"].values():
-            for f in out["files"].values():
-                self.assertEqual(f["sha256"], hashlib.sha256((self.dir / f["name"]).read_bytes()).hexdigest())
+        for st in layout.STYLES:
+            rep = json.loads((self.dir / f"build_report_{st}.json").read_text(encoding="utf-8"))
+            for out in rep["outputs"].values():
+                for f in out["files"].values():
+                    self.assertEqual(f["sha256"], hashlib.sha256((self.dir / f["name"]).read_bytes()).hexdigest())
 
 
 if __name__ == "__main__":

@@ -53,6 +53,8 @@ class Detachment:
     hero_art: Art
     stratagems: tuple[Stratagem, ...]  # already in display order
     keywords: tuple[str, ...] = ()
+    in_play_parts: tuple[str, ...] = ()
+    faction_icon: Art | None = None
     source: dict = field(default_factory=dict)
     source_dir: Path = Path(".")
 
@@ -165,6 +167,8 @@ def parse(data: dict, base: Path) -> Detachment:
         hero_art=_art(_req(data, "hero_art", dict, w), "$.hero_art", base),
         stratagems=tuple(display_order(strats)),
         keywords=tuple(keywords),
+        in_play_parts=tuple(texts["in_play"]),
+        faction_icon=_art(data["faction_icon"], "$.faction_icon", base) if "faction_icon" in data else None,
         source=data.get("source", {}),
         source_dir=base,
     )

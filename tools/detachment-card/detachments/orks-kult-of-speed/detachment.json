@@ -24,6 +24,7 @@
     "[SUSTAINED HITS 1]"
   ],
   "hero_art": { "file": "art/biker.png", "crop": [0.0, 0.06, 1.0, 1.0] },
+  "faction_icon": { "file": "art/biker.png", "crop": [0.69, 0.58, 0.93, 0.98] },
   "detachment_rule": {
     "id": "adrenaline-junkies",
     "name": "Adrenaline Junkies",
@@ -57,7 +58,7 @@
       "when": "Your Shooting phase, when a friendly SPEED FREEKS unit is selected to shoot.",
       "target": "That SPEED FREEKS unit.",
       "effect": "Your unit’s ranged attacks have [SUSTAINED HITS 1].",
-      "art": { "file": "art/dakka.png" }
+      "art": { "file": "art/dakka.png", "crop": [0.05, 0.05, 0.95, 0.95] }
     },
     {
       "id": "speediest-freeks",
@@ -68,7 +69,7 @@
       "when": "Your opponent’s Shooting phase, when an enemy unit targets a friendly SPEED FREEKS unit.",
       "target": "That SPEED FREEKS unit.",
       "effect": "Ranged attacks that target your unit fail on an unmodified Hit roll of 1–3.",
-      "art": { "file": "art/speed.png" }
+      "art": { "file": "art/speed.png", "crop": [0.05, 0.05, 0.95, 0.95] }
     },
     {
       "id": "delicious-eating-squigs",
@@ -79,7 +80,7 @@
       "when": "Your Movement phase.",
       "target": "One friendly RUKKATRUKK SQUIGBUGGIES unit.",
       "effect": "Select any number of friendly ORKS INFANTRY units within 3” of your unit. Each selected unit heals 3 wounds.",
-      "art": { "file": "art/squig.png" }
+      "art": { "file": "art/squig.png", "crop": [0.05, 0.05, 0.95, 0.95] }
     }
   ]
 }

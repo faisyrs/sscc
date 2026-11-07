@@ -1,13 +1,18 @@
 # Detachment card generator
 
 Generates the rules card for the 2" × 8" combination measuring token from a
-detachment source file. Each card face is written as a **layered** file:
+detachment source file, in one of two styles:
+
+- `grunge` (default): riveted, worn metal plates, parchment panels, hazard-striped ends and heavy italic display type. On the full-size print the outline has the token's 1-inch notches cut into it.
+- `classic`: the original flat layout.
+
+Each card face is written as a **layered** file:
 
 | Layer        | Contents                                                        |
 |--------------|-----------------------------------------------------------------|
-| `background` | metal plate, scratch texture, panel fills                       |
-| `borders`    | edge frame, hazard strips, rivets, panel outlines, header bars  |
-| `graphics`   | hero art and stratagem illustrations                            |
+| `background` | metal plate and panel surfaces (parchment)                      |
+| `borders`    | frames, rivets, hazard stripes, seams, and label plates (title, tabs, CP badges, phase ribbons) |
+| `graphics`   | hero art, stratagem art, faction icon, rule icon, checker flag  |
 | `text`       | every word on the card                                          |
 | `guides`     | *hidden*: trim line, safe area, 1-inch notch stations           |
 
@@ -17,6 +22,8 @@ For every detachment it writes, per size (`full` 203.2 × 50.8 mm, `sticker`
 - `*.psd`: 300 DPI, one pixel layer per row above with real transparency, plus a merged image. Opens in Photoshop, GIMP, Affinity and Photopea.
 - `*.svg`: vector, with the same layers as Inkscape layers. Physical size is in mm.
 - `*.png`: flat 300 DPI preview.
+
+Files are named `<id>_<style>_<side>_<size>`. Each style writes its own `build_report_<style>.json`.
 - `build_report.json`: stratagem order, the font size chosen for each text block, and a SHA-256 for every file.
 
 ## Usage
@@ -25,6 +32,7 @@ For every detachment it writes, per size (`full` 203.2 × 50.8 mm, `sticker`
 pip install -r requirements.txt
 python generate.py detachments/orks-kult-of-speed/detachment.json      # -> output/orks-kult-of-speed/
 python generate.py detachments/*/detachment.json --size full --no-psd
+python generate.py detachments/orks-kult-of-speed/detachment.json --style all    # grunge and classic
 python -m unittest discover -s tests
 ```
 
@@ -33,7 +41,7 @@ python -m unittest discover -s tests
 - **The source file is the only input.** Names, rules text, keywords, the setup
   headline and which art goes with which stratagem all come from
   `detachment.json`. The code has no detachment-specific strings.
-- **Fonts are bundled** (`fonts/`, DejaVu Sans Condensed) and the text is drawn
+- **Fonts are bundled** (`fonts/`: DejaVu Sans Condensed for classic, Barlow for grunge, both freely licensed) and the text is drawn
   as outlines, so a line is drawn exactly as wide as it was measured, on any
   machine. Each outline keeps its wording in a `<title>`.
 - **Text is fitted, never squeezed.** Each block takes the largest size, in
@@ -43,7 +51,9 @@ python -m unittest discover -s tests
   draws text that overflows its box.
 - **Validation first.** A missing field, unknown phase or turn, duplicate id,
   missing image or bad crop stops the build with the JSON path of the problem.
-- **Deterministic.** The texture is seeded from the detachment id. Two builds of
+- **Deterministic.** The textures (metal, parchment, chipped paint, hazard
+  stripes) are generated from seeds made of the detachment id and each part's
+  name. Two builds of
   the same source give byte-identical files, and a test checks this.
 - **Tests check the wording.** The drawn lines are joined back together and
   compared with the source text, so a word that was dropped or changed fails
@@ -56,9 +66,14 @@ Copy `detachments/orks-kult-of-speed/` and edit `detachment.json`:
 - `detachment_rule.parts[]`: each part has `display_context` `setup` (setup side) or `in_play` (top strip of the in-play side).
 - `detachment_rule.setup_headline`: the one-line summary on the setup side.
 - `stratagems[]`: `phase` is one of command, movement, shooting, charge, fight, any. `turn` is one of your, opponent, either. Panels are sorted by phase, and stratagems in the same phase keep their file order. Any number of stratagems is laid out; the build fails if they don't fit.
-- `keywords[]`: exact phrases drawn in bold wherever they appear.
+- `keywords[]`: exact phrases drawn in bold wherever they appear. Keywords in square brackets, such as `[ASSAULT]`, are weapon abilities; grunge draws them in red.
+- `faction_icon` (optional): shown at the top right of the grunge setup side. Without it, the faction plate takes the space.
 - `hero_art` and `stratagems[].art`: `{ "file": "art/x.png", "crop": [left, top, right, bottom] }`. The crop is in fractions of the image and is optional. The art is then cover-fitted, centred, to its slot.
 
-Colours and box geometry are in `cardgen/layout.py` (`THEME`, `SIZES`).
+In the grunge in-play strip, each `in_play` part gets its own column. The
+columns are sized so they wrap to the same number of lines.
+
+- **Colours and geometry:** `cardgen/styles/grunge.py` and `cardgen/styles/classic.py`. Token sizes are in `cardgen/geometry.py`.
+- **Adding a style:** add a module under `cardgen/styles/` with `build(d, size, side)` and `safe_area(size)`, then register it in `cardgen/layout.py`.
 
 `hardware/token_2x8.scad` is the OpenSCAD model of the token itself. It is not part of the card build.
