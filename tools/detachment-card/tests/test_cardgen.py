@@ -57,6 +57,7 @@ class SourceValidation(unittest.TestCase):
             "$.background_art.crop": lambda d: d["background_art"].update(crop=[0, 0, 1.5, 1]),
             "$.hero_art": lambda d: d.pop("background_art"),
             "$.theme.title_plate": lambda d: d.update(theme={"title_plate": [300, 0, 0]}),
+            "$.background_focus": lambda d: d.update(background_focus="top"),
             "$.theme.accent": lambda d: d.update(theme={"accent": "#ffffff"}),
             "$.detachment_rule.parts": lambda d: d["detachment_rule"].update(
                 parts=[p for p in d["detachment_rule"]["parts"] if p["display_context"] != "in_play"]

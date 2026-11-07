@@ -78,6 +78,7 @@ class Detachment:
     # A full-card picture behind the setup side (about 4:1, e.g. 2400 x 600 px).
     # Grunge draws the panels over it; classic uses it as its hero picture.
     background_art: Art | None = None
+    background_focus: str = "middle"  # which third of the setup side stays open: left, middle or right
     # Optional card colours: title_plate and label_plate as [r, g, b], label_ink as "#rrggbb".
     theme: dict = field(default_factory=dict)
     source: dict = field(default_factory=dict)
@@ -191,6 +192,9 @@ def parse(data: dict, base: Path) -> Detachment:
 
     if "hero_art" not in data and "background_art" not in data:
         raise SourceError("$.hero_art: required field is missing (or give background_art instead)")
+    focus = data.get("background_focus", "middle")
+    if focus not in ("left", "middle", "right"):
+        raise SourceError(f"$.background_focus: must be 'left', 'middle' or 'right', got {focus!r}")
     theme = data.get("theme", {})
     allowed = {"title_plate": "rgb", "label_plate": "rgb", "label_ink": "hex"}
     if not isinstance(theme, dict):
@@ -226,6 +230,7 @@ def parse(data: dict, base: Path) -> Detachment:
         in_play_parts=tuple(texts["in_play"]),
         faction_icon=_art(data["faction_icon"], "$.faction_icon", base) if "faction_icon" in data else None,
         theme=dict(theme),
+        background_focus=focus,
         source=data.get("source", {}),
         source_dir=base,
     )

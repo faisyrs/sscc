@@ -367,49 +367,53 @@ def _rule_panel_wide(k: Kit, rx, by, rw, bh, tab_h):
 
 
 def _setup_over_background(k: Kit):
-    """Setup side over full-card art. The title and faction plates make a left
-    column and the rule panels a right column. The middle stays open, because
-    that's where the art's main figure usually is."""
+    """Setup side over full-card art. The title and faction plates make one
+    column and the rule panels another. One third of the card stays open for
+    the art's main figure: the middle by default, or the third named by
+    background_focus. Over a left or right focus, both columns sit side by
+    side in the other two thirds."""
     d = k.d
     _, _, cx, cy, cw, ch = _metrics(k.size)
     gap = 1.4
     col = cw * 0.32
+    focus = d.background_focus
+    lx = {"middle": cx, "left": cx + cw - 2 * col - gap, "right": cx}[focus]
 
     # Left column: title plate, then the faction plate (and icon, if any).
     th = ch * 0.5
-    k.plate("title", cx, cy, col, th, k.c["red"], c=1.2, chip=0.16, sw=0.6)
-    for px_ in (cx + 1.3, cx + col - 1.3):
+    k.plate("title", lx, cy, col, th, k.c["red"], c=1.2, chip=0.16, sw=0.6)
+    for px_ in (lx + 1.3, lx + col - 1.3):
         for py_ in (cy + 1.3, cy + th - 1.3):
             k.rivet(px_, py_, 0.42)
     title = tx.plain(d.name.upper())
     tsize = tx.fit_line(title, col - 6, th * 0.62, 3.0, "name", DISPLAY)
     k.label(
-        cx + col / 2, cy + th / 2, title, tsize, C["title_text"], "middle", "name", DISPLAY,
+        lx + col / 2, cy + th / 2, title, tsize, C["title_text"], "middle", "name", DISPLAY,
         outline=C["title_outline"], outline_w=0.55, shadow=C["title_shadow"], shadow_dx=0.4, shadow_dy=0.45,
     )
     tw_ = tx.line_width(title, tsize, DISPLAY)
     cap = tx.cap_height(DISPLAY["regular"]) * tsize
-    k.scuff("title", cx + col / 2 - tw_ / 2, cy + th / 2 - cap / 2, cx + col / 2 + tw_ / 2, cy + th / 2 + cap / 2, _hex(k.c["red"]))
+    k.scuff("title", lx + col / 2 - tw_ / 2, cy + th / 2 - cap / 2, lx + col / 2 + tw_ / 2, cy + th / 2 + cap / 2, _hex(k.c["red"]))
 
     iy = cy + th + gap
     ih = cy + ch - iy
     icon_w = ih if d.faction_icon else 0.0
     iw = col - icon_w - (gap if icon_w else 0)
-    k.plate("info", cx, iy, iw, ih, C["light_metal"], c=1.2, chip=0.08, sw=0.6)
-    for px_ in (cx + 1.3, cx + iw - 1.3):
+    k.plate("info", lx, iy, iw, ih, C["light_metal"], c=1.2, chip=0.08, sw=0.6)
+    for px_ in (lx + 1.3, lx + iw - 1.3):
         for py_ in (iy + 1.3, iy + ih - 1.3):
             k.rivet(px_, py_, 0.38)
     l1 = tx.plain(f"{d.faction.upper()}  •  DETACHMENT ({d.detachment_points} DP)")
     l2 = tx.plain(f"FORCE DISPOSITION: {d.disposition.upper()}")
     s1 = tx.fit_line(l1, iw - 5, ih * 0.3, MIN_LABEL, "faction_points", LABEL)
     s2 = tx.fit_line(l2, iw - 5, s1 * 0.8, MIN_LABEL, "disposition", LABEL)
-    k.label(cx + iw / 2, iy + ih * 0.36, l1, s1, C["ink"], "middle", "faction_points")
-    k.label(cx + iw / 2, iy + ih * 0.70, l2, s2, C["ink"], "middle", "disposition")
+    k.label(lx + iw / 2, iy + ih * 0.36, l1, s1, C["ink"], "middle", "faction_points")
+    k.label(lx + iw / 2, iy + ih * 0.70, l2, s2, C["ink"], "middle", "disposition")
     if d.faction_icon:
-        k.picture(d.faction_icon, cx + iw + gap, iy, icon_w, ih)
+        k.picture(d.faction_icon, lx + iw + gap, iy, icon_w, ih)
 
     # Right column: the rule's name, then the setup-only rule if there is one.
-    rx = cx + cw - col
+    rx = {"middle": cx + cw - col, "left": cx + cw - col, "right": cx + col + gap}[focus]
     tab_h = 4.0
     top = cy + tab_h * 0.32
     if d.setup_text:
