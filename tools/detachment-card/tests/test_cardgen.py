@@ -330,3 +330,59 @@ class Outputs(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Tokens(unittest.TestCase):
+    SRC = ROOT / "tokens/orks.json"
+
+    @classmethod
+    def setUpClass(cls):
+        from cardgen import tokens
+
+        cls.tk = tokens
+        cls.toks = tokens.load(cls.SRC)
+
+    def drawn(self, scene, block):
+        return norm(" ".join(text.line_text(p.line) for p in scene.layers["text"] if isinstance(p, layout.Text) and p.block == block))
+
+    def test_every_face_builds_and_keeps_its_wording(self):
+        for t in self.toks:
+            with self.subTest(token=t.id):
+                front, back = self.tk.build(t, "front"), self.tk.build(t, "back")
+                self.assertEqual(self.drawn(front, "title"), t.title)
+                self.assertEqual(self.drawn(front, "effect"), norm(" ".join(t.effect)))
+                self.assertEqual(self.drawn(back, "back_title"), t.back_title)
+                self.assertEqual(self.drawn(back, "back"), norm(" ".join(t.back)))
+
+    def test_text_stays_inside_the_face(self):
+        import math
+
+        for t in self.toks:
+            for side in self.tk.SIDES:
+                sc = self.tk.build(t, side)
+                c, r = sc.width / 2, t.sticker_d / 2
+                for p in sc.layers["text"]:
+                    if not isinstance(p, layout.Text):
+                        continue
+                    x0, x1 = p.left(), p.left() + p.width()
+                    top, bot = p.y - text.ascent(p.face["regular"]) * p.size, p.y + text.descent(p.face["regular"]) * p.size
+                    for x, y in ((x0, top), (x1, top), (x0, bot), (x1, bot)):
+                        with self.subTest(token=t.id, side=side, block=p.block):
+                            self.assertLessEqual(math.hypot(x - c, y - c), r + 1e-6)
+
+    def test_sizes_and_enemy_ring(self):
+        by = {t.id: t for t in self.toks}
+        self.assertEqual(by["riled-up"].sticker_d, 40.0)
+        self.assertEqual(by["busted"].sticker_d, 32.0)
+        self.assertEqual(by["not-dead-yet"].sticker_d, 25.0)
+        self.assertEqual({t.id for t in self.toks if t.ring == "enemy"}, {"busted", "squigged"})
+
+    def test_bad_token_data_fails(self):
+        data = json.loads(self.SRC.read_text(encoding="utf-8"))
+        data["tokens"][0]["icon"] = "nope"
+        tmp = Path(tempfile.mkdtemp()) / "t.json"
+        tmp.write_text(json.dumps(data), encoding="utf-8")
+        with self.assertRaises(self.tk.TokenError) as cm:
+            self.tk.load(tmp)
+        self.assertIn("$.tokens[0].icon", str(cm.exception))
+        shutil.rmtree(tmp.parent)

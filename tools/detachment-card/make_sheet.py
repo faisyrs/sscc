@@ -48,6 +48,9 @@ def main(argv=None) -> int:
 
     pdf = Path(a.pdf or Path(a.out) / f"stickers_{a.style}_{a.size}_{a.paper}.pdf")
     sheet.write(pages, pdf, a.paper)
+    pngs = sheet.pdf_to_pngs(pdf)
+    if pngs:
+        print(f"wrote {len(pngs)} page PNG(s) at 300 DPI: {', '.join(p.name for p in pngs)}")
     print(f"wrote {pdf}: {sum(map(len, pages))} stickers on {len(pages)} page(s), {room} per page max")
     return 0
 

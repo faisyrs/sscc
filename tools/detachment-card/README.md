@@ -45,6 +45,18 @@ python make_sheet.py detachments/*/detachment.json --paper a4
 
 Run this after `generate.py`. It writes `output/stickers_<style>_<size>_<paper>.pdf`, with the pocket-size stickers at 100% scale. Each sticker has a 1.5 mm bleed, made by extending its edge pixels, and crop marks at the trim line. Both sides of a detachment stay on the same page, with up to 4 stickers per page. On A4 the page is too narrow for side crop marks, so only the top and bottom marks are drawn. Print at actual size, not "fit to page".
 
+## State and tracker tokens
+
+```sh
+python make_tokens.py            # tokens/orks.json -> output/tokens/
+```
+
+Round tokens for effects that last past a single roll, such as Riled Up, Busted and Squigged, and for once-per-battle abilities, such as Ammo Runts and Bomb Squigs. Each token has a front (name, icon, short effect) and a back (the rule and when to remove the token). They come in three sizes: 40 mm, 32 mm and 25 mm. Tokens that go on enemy units have a hazard-striped ring. Unit text comes from BattleScribe (BSData `wh40k-11e`), so check it against the app. Each token is also written as layered SVG, PSD and PNG.
+
+The sheet PDF prints each token's front and back side by side, as many times as the token's `count`, with a 1 mm bleed and cut ticks. Glue the prints to card stock and cut them out. `hardware/token_disc.scad` is an optional 3D-printed holder with a pocket that fits a print.
+
+Both `make_sheet.py` and `make_tokens.py` also write every page as a 300 DPI PNG (2550 × 3300 px for Letter) when poppler's `pdftoppm` is installed.
+
 ## Why the output is predictable
 
 - **The source file is the only input.** Names, rules text, keywords, the setup

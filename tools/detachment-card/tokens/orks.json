@@ -1,0 +1,442 @@
+{
+  "schema_version": "1.0",
+  "id": "orks-tokens",
+  "sources": {
+    "detachments": "detachments/*/detachment.json (checked against the Warhammer app by the user)",
+    "units": "BattleScribe data BSData/wh40k-11e, Orks catalogue revision 8, commit 11ad64c (6 Nov 2026). Community-maintained; not yet checked against the app.",
+    "army_rules": "BSData/wh40k-11e Orks catalogue: Waaagh! and War Cry."
+  },
+  "keywords": [
+    "ORKS",
+    "SPEED FREEKS",
+    "MEGANOBZ/NOBZ",
+    "ORKS AIRCRAFT/DEFFKOPTAS",
+    "WARBOSS",
+    "NAZDREG",
+    "[ASSAULT]",
+    "[LETHAL HITS]",
+    "[SUSTAINED HITS 1]",
+    "MONSTER/VEHICLE",
+    "riled up",
+    "advance/fall-back move",
+    "advance move",
+    "eligible to declare a charge",
+    "battle-shocked",
+    "hit rolls",
+    "hit roll",
+    "wound rolls",
+    "InSv",
+    "ingress move",
+    "objective",
+    "secured",
+    "mortal wounds",
+    "busted",
+    "covered in Squigs",
+    "charge move",
+    "heals",
+    "Waaagh!",
+    "AP",
+    "S",
+    "D",
+    "A",
+    "T"
+  ],
+  "tokens": [
+    {
+      "id": "riled-up",
+      "size": "large",
+      "ring": "army",
+      "count": 4,
+      "icon": "burst",
+      "front": {
+        "title": "RILED UP",
+        "effect": [
+          "5+ INSV • [ASSAULT]",
+          "CAN ADVANCE AND CHARGE"
+        ]
+      },
+      "back": {
+        "title": "WHO RILES 'EM UP",
+        "paragraphs": [
+          "WARBOSS or NAZDREG (Intimidating Motivation): once per battle round, shared by both. Your Movement phase: one ORKS unit within 6\".",
+          "WARTRIKE (Get Back in da Race!): once per battle round. Your Movement phase: one SPEED FREEKS unit within 6\".",
+          "FLYBOSS: after its ingress move, each ORKS AIRCRAFT/DEFFKOPTAS unit within 6\".",
+          "Remove at the start of your next turn."
+        ]
+      },
+      "source": "Waaagh! army rule; Warboss, Nazdreg, Deffkilla Wartrike datasheets; Flyboss enhancement (BSData)"
+    },
+    {
+      "id": "war-cry",
+      "size": "large",
+      "ring": "army",
+      "count": 1,
+      "icon": "burst2",
+      "front": {
+        "title": "WAR CRY",
+        "effect": [
+          "ONCE PER BATTLE",
+          "ALL WAAAGH! UNITS RILED UP"
+        ]
+      },
+      "back": {
+        "title": "WAR CRY",
+        "paragraphs": [
+          "Once per battle, per army. At the start of the Command phase: friendly ORKS units with the Waaagh! ability are riled up until the end of the next turn.",
+          "Remove this token when used."
+        ]
+      },
+      "source": "War Cry army rule (BSData)"
+    },
+    {
+      "id": "charged",
+      "size": "large",
+      "ring": "army",
+      "count": 3,
+      "icon": "chevrons",
+      "front": {
+        "title": "CHARGED",
+        "effect": [
+          "MADE A CHARGE MOVE",
+          "THIS TURN"
+        ]
+      },
+      "back": {
+        "title": "CHARGE BONUSES",
+        "paragraphs": [
+          "WARBIKERS: High-speed Carnage. Melee attacks have +1 S and D.",
+          "WARBOSS: Might is Right. Melee attacks have +3 A and +2 S.",
+          "Remove at the end of the turn."
+        ]
+      },
+      "source": "Warbikers and Warboss datasheets (BSData)"
+    },
+    {
+      "id": "junkies",
+      "size": "small",
+      "ring": "kult",
+      "count": 2,
+      "icon": "bolt",
+      "front": {
+        "title": "JUNKIES",
+        "effect": [
+          "[ASSAULT]",
+          "CAN STILL CHARGE"
+        ]
+      },
+      "back": {
+        "title": "ADRENALINE JUNKIES",
+        "paragraphs": [
+          "After a SPEED FREEKS unit makes an advance/fall-back move: its ranged attacks have [ASSAULT], and that move does not prevent it being eligible to declare a charge.",
+          "Remove at the end of the turn."
+        ]
+      },
+      "source": "Kult of Speed detachment rule"
+    },
+    {
+      "id": "speediest",
+      "size": "small",
+      "ring": "kult",
+      "count": 1,
+      "icon": "die",
+      "front": {
+        "title": "SPEEDIEST",
+        "effect": [
+          "UNMODIFIED HIT",
+          "ROLLS OF 1-3 FAIL"
+        ]
+      },
+      "back": {
+        "title": "SPEEDIEST FREEKS",
+        "paragraphs": [
+          "Ranged attacks that target this SPEED FREEKS unit fail on an unmodified hit roll of 1-3.",
+          "Remove at the end of the phase."
+        ]
+      },
+      "source": "Kult of Speed stratagem. Lasting the whole phase is the user's ruling.",
+      "note": "duration from user"
+    },
+    {
+      "id": "grab-it",
+      "size": "small",
+      "ring": "wreckas",
+      "count": 2,
+      "icon": "crate",
+      "front": {
+        "title": "GRAB IT",
+        "effect": [
+          "NOT ELIGIBLE",
+          "TO CHARGE"
+        ]
+      },
+      "back": {
+        "title": "GRAB IT",
+        "paragraphs": [
+          "This unit is not eligible to declare a charge until the end of the turn.",
+          "Remove at the end of the turn."
+        ]
+      },
+      "source": "Wreckas stratagem"
+    },
+    {
+      "id": "brutes",
+      "size": "small",
+      "ring": "bully",
+      "count": 1,
+      "icon": "shield",
+      "front": {
+        "title": "BRUTES",
+        "effect": [
+          "-1 TO WOUND IF S > T",
+          "+1CP: ALL RANGED"
+        ]
+      },
+      "back": {
+        "title": "HULKING BRUTES",
+        "paragraphs": [
+          "1CP: ranged attacks that target this unit with a S greater than its T have -1 to wound rolls.",
+          "2CP: ranged attacks that target this unit have -1 to wound rolls."
+        ]
+      },
+      "source": "Bully Boyz stratagem. The card states no duration."
+    },
+    {
+      "id": "too-arrogant",
+      "size": "small",
+      "ring": "bully",
+      "count": 1,
+      "icon": "skull",
+      "front": {
+        "title": "TOO ARROGANT",
+        "effect": [
+          "DESTROYED? D6, 4+:",
+          "STAYS UNTIL IT FIGHTS"
+        ]
+      },
+      "back": {
+        "title": "TOO ARROGANT TO DIE",
+        "paragraphs": [
+          "When a model in this unit is destroyed, if it has not been selected to fight this phase, roll one D6 (+1 if riled up). On a 4+, leave the model on the battlefield until the unit has fought or the end of the phase. Mark it with a Not Dead Yet marker."
+        ]
+      },
+      "source": "Bully Boyz stratagem. The card states no duration."
+    },
+    {
+      "id": "not-dead-yet",
+      "size": "marker",
+      "ring": "bully",
+      "count": 4,
+      "icon": "skull",
+      "front": {
+        "title": "NOT DEAD YET",
+        "effect": [
+          "UNTIL ITS UNIT FIGHTS"
+        ]
+      },
+      "back": {
+        "title": "NOT DEAD YET",
+        "paragraphs": [
+          "Remove the model when its unit has fought, or at the end of the phase."
+        ]
+      },
+      "source": "Too Arrogant to Die stratagem"
+    },
+    {
+      "id": "busted",
+      "size": "small",
+      "ring": "enemy",
+      "count": 2,
+      "icon": "crosshair",
+      "front": {
+        "title": "BUSTED",
+        "effect": [
+          "SPEED FREEKS GET",
+          "[LETHAL HITS]"
+        ]
+      },
+      "back": {
+        "title": "BUST 'EM",
+        "paragraphs": [
+          "WARTRAKKS: after shooting, one enemy unit hit is busted. Friendly SPEED FREEKS units' attacks that target it have [LETHAL HITS].",
+          "Remove at the end of the turn."
+        ]
+      },
+      "source": "Wartrakks datasheet (BSData)"
+    },
+    {
+      "id": "squigged",
+      "size": "small",
+      "ring": "enemy",
+      "count": 2,
+      "icon": "squig",
+      "front": {
+        "title": "SQUIGGED",
+        "effect": [
+          "ITS ATTACKS",
+          "-1 TO HIT"
+        ]
+      },
+      "back": {
+        "title": "SQUIG BARRAGE",
+        "paragraphs": [
+          "RUKKATRUKK: after shooting, one enemy unit (not MONSTER/VEHICLE) hit by Squig Launchas is covered in Squigs. Its attacks have -1 to hit rolls.",
+          "Remove at the start of your next turn."
+        ]
+      },
+      "source": "Rukkatrukk Squigbuggies datasheet (BSData)"
+    },
+    {
+      "id": "ingressed",
+      "size": "small",
+      "ring": "army",
+      "count": 1,
+      "icon": "arrow-down",
+      "front": {
+        "title": "INGRESSED",
+        "effect": [
+          "DEFFKOPTAS: +1 TO",
+          "HIT WHEN SHOOTING"
+        ]
+      },
+      "back": {
+        "title": "DEFF FROM ABOVE",
+        "paragraphs": [
+          "DEFFKOPTAS: in your Shooting phase, if this unit made an ingress move this turn, its ranged attacks have +1 to hit rolls.",
+          "Remove at the end of the turn."
+        ]
+      },
+      "source": "Deffkoptas datasheet (BSData)"
+    },
+    {
+      "id": "secured",
+      "size": "small",
+      "ring": "army",
+      "count": 2,
+      "icon": "flag",
+      "front": {
+        "title": "SECURED",
+        "effect": [
+          "OBJECTIVE",
+          "SECURED"
+        ]
+      },
+      "back": {
+        "title": "THIEVIN' SCAVENGERS",
+        "paragraphs": [
+          "GRETCHIN: at the end of your Movement phase, if this unit is controlling an objective, that objective is secured."
+        ]
+      },
+      "source": "Gretchin datasheet (BSData)"
+    },
+    {
+      "id": "ammo-runt",
+      "size": "small",
+      "ring": "army",
+      "count": 1,
+      "icon": "bullet",
+      "front": {
+        "title": "AMMO RUNT",
+        "effect": [
+          "ONCE: +1 TO HIT",
+          "WHEN SHOOTING"
+        ]
+      },
+      "back": {
+        "title": "AMMO RUNTS",
+        "paragraphs": [
+          "NOBZ, once per battle: when selected to shoot, this unit's ranged attacks have +1 to hit rolls.",
+          "Remove this token when used."
+        ]
+      },
+      "source": "Nobz datasheet (BSData)"
+    },
+    {
+      "id": "boss-ammo-runt",
+      "size": "small",
+      "ring": "army",
+      "count": 1,
+      "icon": "bullet2",
+      "front": {
+        "title": "BOSS' AMMO",
+        "effect": [
+          "ONCE: +1 TO HIT",
+          "WHEN SHOOTING"
+        ]
+      },
+      "back": {
+        "title": "BOSS' AMMO RUNT",
+        "paragraphs": [
+          "WARBOSS, once per battle: when selected to shoot, this model's ranged attacks have +1 to hit rolls.",
+          "Remove this token when used."
+        ]
+      },
+      "source": "Warboss datasheet (BSData)"
+    },
+    {
+      "id": "bomb-squig",
+      "size": "small",
+      "ring": "wreckas",
+      "count": 2,
+      "icon": "bomb",
+      "front": {
+        "title": "BOMB SQUIG",
+        "effect": [
+          "3+: D3 MORTAL",
+          "WOUNDS"
+        ]
+      },
+      "back": {
+        "title": "BOMB SQUIG",
+        "paragraphs": [
+          "TANKBUSTAS, once per turn, twice per battle: when this unit ends a normal move, roll one D6 against a visible enemy unit within 12\". On a 3+, it suffers D3 mortal wounds.",
+          "Remove one token each time it is used."
+        ]
+      },
+      "source": "Tankbustas datasheet (BSData)"
+    },
+    {
+      "id": "pulsa-rokkit",
+      "size": "small",
+      "ring": "wreckas",
+      "count": 1,
+      "icon": "rocket",
+      "front": {
+        "title": "PULSA ROKKIT",
+        "effect": [
+          "ONCE: +1 AP AND",
+          "[LETHAL HITS]"
+        ]
+      },
+      "back": {
+        "title": "PULSA ROKKIT",
+        "paragraphs": [
+          "TANKBUSTAS, once per battle: when selected to shoot, pick an enemy MONSTER/VEHICLE unit within 24\". Attacks that target it have +1 AP and [LETHAL HITS].",
+          "Remove this token when used."
+        ]
+      },
+      "source": "Tankbustas datasheet (BSData)"
+    },
+    {
+      "id": "grot-orderly",
+      "size": "small",
+      "ring": "army",
+      "count": 1,
+      "icon": "cross",
+      "front": {
+        "title": "GROT ORDERLY",
+        "effect": [
+          "ONCE: HEAL",
+          "+D3 MORE"
+        ]
+      },
+      "back": {
+        "title": "CATCH DAT RED BIT",
+        "paragraphs": [
+          "PAINBOY, once per battle: when it uses Crude Surgery, add D3 to the number of wounds it heals.",
+          "Remove this token when used."
+        ]
+      },
+      "source": "Painboy datasheet (BSData)"
+    }
+  ]
+}

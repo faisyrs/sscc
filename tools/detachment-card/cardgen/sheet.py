@@ -97,3 +97,80 @@ def write(pages: list[list[Face]], out: str | Path, paper: str = "letter", title
         c.drawRightString((pw - MARGIN) * mm, (MARGIN / 2) * mm, f"Print at 100% (actual size), not 'fit to page'. Page {n} of {len(pages)}")
         c.showPage()
     c.save()
+
+
+@dataclass(frozen=True)
+class Disc:
+    png: Path  # RGBA, already including the bleed
+    diameter: float  # cut diameter, mm
+    bleed: float
+    label: str
+
+
+def _ticks(c: canvas.Canvas, cx: float, cy: float, r: float):
+    """Four short marks pointing at the cut circle from outside the bleed. Coordinates in mm."""
+    o = BLEED + MARK_GAP
+    c.setLineWidth(0.25)
+    c.setStrokeColorRGB(0, 0, 0)
+    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        c.line((cx + dx * (r + o)) * mm, (cy + dy * (r + o)) * mm, (cx + dx * (r + o + 2.5)) * mm, (cy + dy * (r + o + 2.5)) * mm)
+
+
+def write_discs(discs: list[Disc], out: str | Path, paper: str = "letter", title: str = "") -> int:
+    """Circles in rows, largest first, filling pages left to right and top to bottom. Returns the page count."""
+    pw, ph = PAPERS[paper]
+    c = canvas.Canvas(str(out), pagesize=(pw * mm, ph * mm))
+    c.setTitle(title or "Token stickers")
+    c.setCreator("tools/detachment-card")
+    gap = 2 * (MARK_GAP + 2.5) + 1.0  # room for the ticks between neighbours
+    x0, x1 = SIDE_CLEAR + 2.0, pw - SIDE_CLEAR - 2.0
+    pages, y_top, x, row_h = 1, ph - MARGIN, x0, 0.0
+
+    def footer():
+        c.setFont("Helvetica", 6.5)
+        c.setFillColorRGB(0.35, 0.35, 0.35)
+        c.drawRightString((pw - MARGIN) * mm, (MARGIN / 2) * mm, f"Print at 100% (actual size), not 'fit to page'. Page {pages}")
+
+    for d in discs:
+        cell = d.diameter + 2 * d.bleed + gap
+        if x + cell > x1 + 1e-6:  # next row
+            x, y_top, row_h = x0, y_top - row_h, 0.0
+        if y_top - (cell + 3.0) < MARGIN:  # next page
+            footer()
+            c.showPage()
+            pages += 1
+            x, y_top, row_h = x0, ph - MARGIN, 0.0
+        cx, cy = x + cell / 2, y_top - cell / 2
+        size = d.diameter + 2 * d.bleed
+        c.drawImage(ImageReader(str(d.png)), (cx - size / 2) * mm, (cy - size / 2) * mm, size * mm, size * mm, mask="auto")
+        _ticks(c, cx, cy, d.diameter / 2)
+        c.setFont("Helvetica", 5)
+        c.setFillColorRGB(0.4, 0.4, 0.4)
+        c.drawCentredString(cx * mm, (y_top - cell - 1.2) * mm, d.label)
+        x += cell
+        row_h = max(row_h, cell + 3.0)
+    footer()
+    c.showPage()
+    c.save()
+    return pages
+
+
+def pdf_to_pngs(pdf: str | Path, dpi: int = 300) -> list[Path]:
+    """Rasterize each page of the PDF to a PNG at `dpi` (Letter at 300 DPI is 2550 x 3300 px).
+    Needs poppler's pdftoppm. Returns the PNG paths, or [] if pdftoppm isn't installed."""
+    import shutil
+    import subprocess
+
+    from PIL import Image
+
+    if not shutil.which("pdftoppm"):
+        return []
+    pdf = Path(pdf)
+    prefix = pdf.with_suffix("")
+    subprocess.run(["pdftoppm", "-r", str(dpi), "-png", str(pdf), str(prefix) + "_page"], check=True)
+    pages = sorted(pdf.parent.glob(prefix.name + "_page-*.png"))
+    for p in pages:  # record the DPI so the image opens at its printed size
+        with Image.open(p) as im:
+            im.load()
+            im.save(p, dpi=(dpi, dpi))
+    return pages
