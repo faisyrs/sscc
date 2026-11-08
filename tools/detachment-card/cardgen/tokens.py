@@ -15,6 +15,7 @@ import math
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import artfit
 from . import text as tx
 from . import textures as tex
 from .scene import ArcText, Circle, Picture, Poly, Rect, Scene, Stroke, Text
@@ -375,6 +376,27 @@ def _border(sc, t, side, g: Rings, bleed):
     sc.add("borders", Circle(c, c, g.border_in, "none", INK, 0.35))
 
 
+ART_CUT = 0.3  # the divider under a front illustration, as a fraction of the face radius below the centre
+ART_SCALE, ART_LIFT = 1.15, 0.15  # the illustration is enlarged and raised, so more of its lower scene shows above the cut
+TITLE_ON_ART = dict(color=BONE, outline=INK, outline_w=0.3, halo=((INK, 1.3, 0.25), (INK, 0.8, 0.45)))
+
+
+def _art_window(sc, t, g: Rings, bleed):
+    """The illustration filling the face above a horizontal divider."""
+    c, r = g.c, g.face
+    cut = c + ART_CUT * r
+    th0 = math.acos(-ART_CUT)
+    n = 120
+    window = tuple((c + r * math.sin(-th0 + 2 * th0 * i / n), c - r * math.cos(-th0 + 2 * th0 * i / n)) for i in range(n + 1))
+    R = r * ART_SCALE
+    x, y = c - R, c - ART_LIFT * r - R
+    art = t.art
+    sc.add("graphics", _bitmap(f"token/{t.id}/front/{bleed}/art", x, y, 2 * R, 2 * R, [window],
+                               lambda wp, hp: artfit.fit(art.path, art.crop, art.transparent, wp, hp)))
+    hw = chord(r, cut - c) / 2
+    sc.add("borders", Stroke(c - hw, cut, c + hw, cut, INK, 0.6), Stroke(c - hw, cut + 0.45, c + hw, cut + 0.45, BRASS, 0.25))
+
+
 def _band(sc, t, side, g: Rings, bleed, title):
     """The turn-coloured stripe, then the parchment face with the title curved along its top."""
     c, W = g.c, sc.width
@@ -385,7 +407,11 @@ def _band(sc, t, side, g: Rings, bleed, title):
     sc.add("background", _bitmap(f"token/{t.id}/{side}/{bleed}/face", c - g.face, c - g.face, 2 * g.face, 2 * g.face,
                                  [circle_pts(c, c, g.face)], lambda wp, hp, s=_seed(t, "face"): tex.parchment(wp, hp, s)))
     sc.add("borders", Circle(c, c, g.face, "none", INK, 0.35))
-    _arc_label(sc, g, title, DISPLAY, math.radians(150), "title" if side == "front" else "back_title", t.id)
+    on_art = side == "front" and t.art is not None
+    if on_art:
+        _art_window(sc, t, g, bleed)
+    _arc_label(sc, g, title, DISPLAY, math.radians(150), "title" if side == "front" else "back_title", t.id,
+               **(TITLE_ON_ART if on_art else {}))
     sc.add("guides", Circle(c, c, g.R, "none", C["guide"], 0.15))  # the cut line, on the hidden guides layer
 
 
@@ -394,7 +420,7 @@ TITLE_GAP = 0.04
 INNER = 1 - TITLE_H - TITLE_GAP - 0.02  # text that could meet the title's curved ends stays inside this fraction
 
 
-def _arc_label(sc, g: Rings, text_, face, max_angle, block, tid):
+def _arc_label(sc, g: Rings, text_, face, max_angle, block, tid, color=INK, outline="", outline_w=0.0, halo=()):
     """The title, curved along the top of the face just inside the stripe, sized to its ring and the allowed arc."""
     line = tx.plain(text_)
     cap = tx.cap_height(face["regular"])
@@ -405,7 +431,7 @@ def _arc_label(sc, g: Rings, text_, face, max_angle, block, tid):
             break
     else:
         raise tx.LayoutError(f"{tid}.{block}: {text_!r} does not fit along the top of the token")
-    sc.add("text", ArcText(g.c, g.c, r, 0.0, line, size, INK, face, False, block))
+    sc.add("text", ArcText(g.c, g.c, r, 0.0, line, size, color, face, False, block, outline=outline, outline_w=outline_w, halo=halo))
     sc.fits[block] = size
 
 
@@ -435,9 +461,8 @@ LABEL_FACE = {"regular": "barlow-label", "bold": "barlow-label", "ability": "bar
 def _front(sc, t, c, r):
     """Picture (illustration or vector icon) under the curved title, then the
     source of the effect in red (if any), then the short effect."""
-    if t.art is not None:
-        _picture(sc, t, c, c - r * 0.215, r * 1.1)
-        top = c + r * 0.36
+    if t.art is not None:  # drawn by _art_window, above the divider
+        top = c + r * (ART_CUT + 0.06)
     else:
         _picture(sc, t, c, c - r * 0.25, r * 0.88)
         top = c + r * 0.3

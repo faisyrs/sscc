@@ -119,6 +119,10 @@ def _element(p) -> str:
     if isinstance(p, ArcText):
         runs = tx.arc_outline(p.line, p.size, p.face, p.cx, p.cy, p.radius, p.centre, p.bottom)
         parts = []
+        for colour, w, op in p.halo:
+            d = " ".join(c for _, c in runs if c)
+            parts.append(f'<path fill="{colour}" fill-opacity="{_n(op)}" stroke="{colour}" stroke-opacity="{_n(op)}" '
+                         f'stroke-width="{_n(w * 2)}" stroke-linejoin="round" d="{d}"/>')
         if p.outline:
             d = " ".join(c for _, c in runs if c)
             parts.append(f'<path fill="{p.outline}" stroke="{p.outline}" stroke-width="{_n(p.outline_w * 2)}" stroke-linejoin="round" d="{d}"/>')

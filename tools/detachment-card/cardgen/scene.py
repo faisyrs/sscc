@@ -135,3 +135,4 @@ class ArcText:
     block: str = ""
     outline: str = ""
     outline_w: float = 0.0
+    halo: tuple = ()  # ((colour, stroke width mm, opacity), ...), drawn widest first, behind the outline
