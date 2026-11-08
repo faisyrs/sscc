@@ -375,12 +375,12 @@ class Tokens(unittest.TestCase):
 
     def test_sizes_and_enemy_ring(self):
         by = {t.id: t for t in self.toks}
-        self.assertEqual(by["riled-up"].sticker_d, 40.0)
+        self.assertEqual(by["riled-up-motivation"].sticker_d, 40.0)
         self.assertEqual(by["busted"].sticker_d, 32.0)
         self.assertEqual(by["not-dead-yet"].sticker_d, 25.0)
         by_turn = {turn: {t.id for t in self.toks if t.turn == turn} for turn in self.tk.TURNS}
         self.assertEqual(by_turn["opponent"], {"speediest", "brutes"})
-        self.assertIn("riled-up", by_turn["either"])
+        self.assertTrue({"riled-up-motivation", "riled-up-race", "riled-up-flyboss"} <= by_turn["either"])
         self.assertEqual({t.id for t in self.toks if t.theme == "misc"}, {"grab-it", "secured"})
 
     def test_curved_titles_stay_in_the_band(self):
@@ -396,6 +396,37 @@ class Tokens(unittest.TestCase):
                         with self.subTest(token=t.id, side=side, block=p.block):
                             self.assertGreaterEqual(lo, g.face - 1e-6)
                             self.assertLessEqual(hi, g.border_in + 1e-6)
+
+    def test_riled_up_fronts_name_their_source(self):
+        by = {t.id: t for t in self.toks}
+        for tid, via in (("riled-up-motivation", "INTIMIDATING MOTIVATION"), ("riled-up-race", "GET BACK IN DA RACE!"), ("riled-up-flyboss", "FLYBOSS")):
+            self.assertEqual(self.drawn(self.tk.build(by[tid], "front"), "via"), via)
+
+    def test_duplex_backs_mirror_their_fronts(self):
+        from cardgen import sheet
+
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            t = self.toks[0]
+            png = tmp / "x.png"
+            from PIL import Image
+
+            Image.new("RGBA", (10, 10)).save(png)
+            pairs = [(sheet.Disc(png, t.sticker_d, 1.5, "f"), sheet.Disc(png, t.sticker_d, 3.0, ""))] * 3
+            calls = []
+            orig = sheet.canvas.Canvas.drawImage
+            sheet.canvas.Canvas.drawImage = lambda self, img, x, y, w, h, **k: calls.append((x + w / 2, y + h / 2))
+            try:
+                sheet.write_duplex(pairs, tmp / "d.pdf")
+            finally:
+                sheet.canvas.Canvas.drawImage = orig
+            fronts, backs = calls[:3], calls[3:]
+            pw = sheet.PAPERS["letter"][0] * sheet.mm
+            for (fx, fy), (bx, by_) in zip(fronts, backs):
+                self.assertAlmostEqual(fx, pw - bx, places=6)
+                self.assertAlmostEqual(fy, by_, places=6)
+        finally:
+            shutil.rmtree(tmp)
 
     def test_bad_token_data_fails(self):
         data = json.loads(self.SRC.read_text(encoding="utf-8"))

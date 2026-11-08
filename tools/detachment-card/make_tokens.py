@@ -16,7 +16,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from cardgen import render, sheet, text, tokens  # noqa: E402
 
-SHEET_BLEED = 1.0  # mm
+FRONT_BLEED = 1.5  # mm
+BACK_BLEED = 3.0  # mm; wider, so a back glued slightly off still covers the cut edge
 
 
 def main(argv=None) -> int:
@@ -39,7 +40,7 @@ def main(argv=None) -> int:
             stem = out / f"{t.id}_{side}"
             try:
                 scene = tokens.build(t, side)
-                bled = tokens.build(t, side, SHEET_BLEED)
+                bled = tokens.build(t, side, FRONT_BLEED if side == "front" else BACK_BLEED)
             except text.LayoutError as e:
                 print(f"FAILED {t.id} {side}: {e}", file=sys.stderr)
                 return 1
@@ -51,18 +52,24 @@ def main(argv=None) -> int:
             sheet_png = out / f"_sheet_{t.id}_{side}.png"
             render.composite(render.rasterize(bled)).save(sheet_png, dpi=(render.DPI, render.DPI))
             discs.append((t, side, sheet_png))
-    order = []
+    pairs = []
     for t in sorted(toks, key=lambda t: -t.sticker_d):
+        png = {s: p for tt, s, p in discs if tt.id == t.id}
         for _ in range(t.count):
-            for side in tokens.SIDES:
-                png = next(p for tt, s, p in discs if tt.id == t.id and s == side)
-                order.append(sheet.Disc(png, t.sticker_d, SHEET_BLEED, f"{t.id} {side} ({t.sticker_d:g} mm)"))
-    pdf = out / f"token_stickers_{a.paper}.pdf"
-    pages = sheet.write_discs(order, pdf, a.paper)
+            pairs.append((sheet.Disc(png["front"], t.sticker_d, FRONT_BLEED, f"{t.id} ({t.sticker_d:g} mm)"),
+                          sheet.Disc(png["back"], t.sticker_d, BACK_BLEED, "")))
+    pdf = out / f"token_sheets_{a.paper}.pdf"
+    n = sheet.write_duplex(pairs, pdf, a.paper)
     pngs = sheet.pdf_to_pngs(pdf)
-    if pngs:
-        print(f"wrote {len(pngs)} page PNG(s) at 300 DPI: {', '.join(p.name for p in pngs)}")
-    print(f"built {len(toks)} tokens ({len(toks) * 2} faces); wrote {pdf}: {len(order)} stickers on {pages} page(s)")
+    # Name the page images by sheet and side: the PDF alternates front, back.
+    named = []
+    for i, p in enumerate(pngs):
+        target = p.with_name(f"token_sheet{i // 2 + 1}_{'front' if i % 2 == 0 else 'back'}_{a.paper}.png")
+        p.replace(target)
+        named.append(target.name)
+    if named:
+        print(f"wrote {len(named)} page PNG(s) at 300 DPI: {', '.join(named)}")
+    print(f"built {len(toks)} tokens; wrote {pdf}: {len(pairs)} tokens on {n} sheet(s), each a front page and a back page")
     return 0
 
 

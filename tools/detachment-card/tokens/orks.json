@@ -43,29 +43,76 @@
   ],
   "tokens": [
     {
-      "id": "riled-up",
+      "id": "riled-up-motivation",
       "size": "large",
       "turn": "either",
       "theme": "offensive",
-      "count": 4,
+      "count": 1,
       "icon": "burst",
       "front": {
         "title": "RILED UP",
         "effect": [
           "5+ INSV • [ASSAULT]",
           "CAN ADVANCE AND CHARGE"
-        ]
+        ],
+        "via": "INTIMIDATING MOTIVATION"
       },
       "back": {
-        "title": "WHO RILES 'EM UP",
+        "title": "INTIMIDATING MOTIVATION",
         "paragraphs": [
-          "WARBOSS or NAZDREG (Intimidating Motivation): once per battle round, shared by both. Your Movement phase: one ORKS unit within 6\".",
-          "WARTRIKE (Get Back in da Race!): once per battle round. Your Movement phase: one SPEED FREEKS unit within 6\".",
-          "FLYBOSS: after its ingress move, each ORKS AIRCRAFT/DEFFKOPTAS unit within 6\".",
+          "WARBOSS or NAZDREG, once per battle round, per army (shared by both): in your Movement phase, at the start or end of its move, one friendly ORKS unit within 6\" is no longer battle-shocked and is riled up.",
           "Remove at the start of your next turn."
         ]
       },
-      "source": "Waaagh! army rule; Warboss, Nazdreg, Deffkilla Wartrike datasheets; Flyboss enhancement (BSData)"
+      "source": "Warboss and Nazdreg datasheets (BSData)"
+    },
+    {
+      "id": "riled-up-race",
+      "size": "large",
+      "turn": "either",
+      "theme": "offensive",
+      "count": 1,
+      "icon": "burst",
+      "front": {
+        "title": "RILED UP",
+        "effect": [
+          "5+ INSV • [ASSAULT]",
+          "CAN ADVANCE AND CHARGE"
+        ],
+        "via": "GET BACK IN DA RACE!"
+      },
+      "back": {
+        "title": "GET BACK IN DA RACE!",
+        "paragraphs": [
+          "WARTRIKE, once per battle round, per army: in your Movement phase, at the start or end of its move, one friendly SPEED FREEKS unit within 6\" (and any units embarked in it) is no longer battle-shocked and is riled up.",
+          "Remove at the start of your next turn."
+        ]
+      },
+      "source": "Deffkilla Wartrike datasheet (BSData)"
+    },
+    {
+      "id": "riled-up-flyboss",
+      "size": "large",
+      "turn": "either",
+      "theme": "offensive",
+      "count": 2,
+      "icon": "burst",
+      "front": {
+        "title": "RILED UP",
+        "effect": [
+          "5+ INSV • [ASSAULT]",
+          "CAN ADVANCE AND CHARGE"
+        ],
+        "via": "FLYBOSS"
+      },
+      "back": {
+        "title": "FLYBOSS",
+        "paragraphs": [
+          "FLYBOSS (an ORKS AIRCRAFT enhancement): when it ends an ingress move, each friendly ORKS AIRCRAFT/DEFFKOPTAS unit within 6\" is riled up.",
+          "Remove at the start of your next turn."
+        ]
+      },
+      "source": "Flyboss enhancement, Flyboyz detachment (BSData)"
     },
     {
       "id": "war-cry",

@@ -50,6 +50,7 @@ class Token:
     back: tuple
     source: str
     keywords: tuple = field(default=())
+    via: str = ""  # front: the name of the ability that gave this state
 
     @property
     def sticker_d(self):
@@ -83,7 +84,7 @@ def load(path) -> list[Token]:
                 t["id"], t["size"], t["turn"], t["theme"], t["count"], t["icon"],
                 t["front"]["title"], tuple(t["front"]["effect"]),
                 t["back"]["title"], tuple(t["back"]["paragraphs"]),
-                t.get("source", ""), kws,
+                t.get("source", ""), kws, t["front"].get("via", ""),
             )
         )
     return out
@@ -404,9 +405,20 @@ def build(t: Token, side: str, bleed: float = 0.0) -> Scene:
 
 
 def _front(sc, t, c, r):
-    # Big icon in the upper part of the face, the effect text below it.
-    s = r * 0.95
-    ICONS[t.icon](sc, c, c - r * 0.3, s)
+    # Big icon in the upper part of the face, the effect text below it. A token
+    # that names where its state came from (via) shows that name above the icon.
+    if t.via:
+        top, bottom = c - r * 0.86, c - r * 0.56
+        face = {"regular": "barlow-label", "bold": "barlow-label", "ability": "barlow-label"}
+        fit = fit_in_circle([tx.tokenize(t.via, ())], c, r, top, bottom, r * 0.2, MIN_TEXT, face, 1.0, f"{t.id}.via", pad=0.3)
+        y = top + (bottom - top - tx.block_height(len(fit.lines), fit.size, face, 1.0)) / 2 + tx.ascent(face["regular"]) * fit.size
+        for line in fit.lines:
+            sc.add("text", Text(c, y, line, fit.size, RED, "middle", "via", face=face))
+            y += fit.size
+        sc.fits["via"] = fit.size
+        ICONS[t.icon](sc, c, c - r * 0.13, r * 0.7)
+    else:
+        ICONS[t.icon](sc, c, c - r * 0.3, r * 0.95)
     top, bottom = c + r * 0.3, c + r * 0.94
     paras = [tx.tokenize(e, t.keywords) for e in t.effect]
     face = {"regular": "barlow-label", "bold": "barlow-label", "ability": "barlow-label"}

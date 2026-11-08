@@ -116,43 +116,70 @@ def _ticks(c: canvas.Canvas, cx: float, cy: float, r: float):
         c.line((cx + dx * (r + o)) * mm, (cy + dy * (r + o)) * mm, (cx + dx * (r + o + 2.5)) * mm, (cy + dy * (r + o + 2.5)) * mm)
 
 
-def write_discs(discs: list[Disc], out: str | Path, paper: str = "letter", title: str = "") -> int:
-    """Circles in rows, largest first, filling pages left to right and top to bottom. Returns the page count."""
+def _registration(c: canvas.Canvas, pw: float, ph: float):
+    """Crosshair targets near the four corners. The set is symmetric left to right,
+    so the targets on a front page and its mirrored back page coincide."""
+    c.setLineWidth(0.25)
+    c.setStrokeColorRGB(0, 0, 0)
+    for x in (SIDE_CLEAR + 3.0, pw - SIDE_CLEAR - 3.0):
+        for y in (MARGIN / 2 + 1.0, ph - MARGIN / 2 - 1.0):
+            c.circle(x * mm, y * mm, 1.6 * mm)
+            c.line((x - 2.6) * mm, y * mm, (x + 2.6) * mm, y * mm)
+            c.line(x * mm, (y - 2.6) * mm, x * mm, (y + 2.6) * mm)
+
+
+def write_duplex(pairs: list[tuple[Disc, Disc]], out: str | Path, paper: str = "letter", title: str = "") -> int:
+    """Fronts and backs on facing pages: page 1 front, page 1 back, page 2 front, and so on.
+
+    Each back is placed at the mirror-image position of its front (x -> page
+    width - x). So when the front page is glued to one side of a card and the back
+    page to the other side, with the registration targets lined up, every back sits
+    behind its front. It also matches two-sided printing with long-edge flip.
+    Cut ticks and labels are on the fronts only. Returns the number of sheets."""
     pw, ph = PAPERS[paper]
-    c = canvas.Canvas(str(out), pagesize=(pw * mm, ph * mm))
-    c.setTitle(title or "Token stickers")
-    c.setCreator("tools/detachment-card")
-    gap = 2 * (MARK_GAP + 2.5) + 1.0  # room for the ticks between neighbours
+    tick = MARK_GAP + 2.5
+    # Lay out positions once, then draw both sides from the same positions.
+    placed, sheets = [], [[]]
     x0, x1 = SIDE_CLEAR + 2.0, pw - SIDE_CLEAR - 2.0
-    pages, y_top, x, row_h = 1, ph - MARGIN, x0, 0.0
-
-    def footer():
-        c.setFont("Helvetica", 6.5)
-        c.setFillColorRGB(0.35, 0.35, 0.35)
-        c.drawRightString((pw - MARGIN) * mm, (MARGIN / 2) * mm, f"Print at 100% (actual size), not 'fit to page'. Page {pages}")
-
-    for d in discs:
-        cell = d.diameter + 2 * d.bleed + gap
-        if x + cell > x1 + 1e-6:  # next row
+    y_top, x, row_h = ph - MARGIN - 3.0, x0, 0.0
+    for front, back in pairs:
+        reach = max(front.bleed + tick, back.bleed)  # radius beyond the cut line that this cell needs
+        cell = front.diameter + 2 * reach + 1.0
+        if x + cell > x1 + 1e-6:
             x, y_top, row_h = x0, y_top - row_h, 0.0
-        if y_top - (cell + 3.0) < MARGIN:  # next page
-            footer()
-            c.showPage()
-            pages += 1
-            x, y_top, row_h = x0, ph - MARGIN, 0.0
-        cx, cy = x + cell / 2, y_top - cell / 2
-        size = d.diameter + 2 * d.bleed
-        c.drawImage(ImageReader(str(d.png)), (cx - size / 2) * mm, (cy - size / 2) * mm, size * mm, size * mm, mask="auto")
-        _ticks(c, cx, cy, d.diameter / 2)
-        c.setFont("Helvetica", 5)
-        c.setFillColorRGB(0.4, 0.4, 0.4)
-        c.drawCentredString(cx * mm, (y_top - cell - 1.2) * mm, d.label)
+        if y_top - (cell + 3.0) < MARGIN + 3.0:
+            sheets.append([])
+            x, y_top, row_h = x0, ph - MARGIN - 3.0, 0.0
+        sheets[-1].append((x + cell / 2, y_top - cell / 2, cell, front, back))
         x += cell
         row_h = max(row_h, cell + 3.0)
-    footer()
-    c.showPage()
+
+    c = canvas.Canvas(str(out), pagesize=(pw * mm, ph * mm))
+    c.setTitle(title or "Token stickers, fronts and backs")
+    c.setCreator("tools/detachment-card")
+    n = len(sheets)
+    for i, sheet_items in enumerate(sheets, 1):
+        for side in ("front", "back"):
+            for cx, cy, cell, front, back in sheet_items:
+                d = front if side == "front" else back
+                if side == "back":
+                    cx = pw - cx
+                size = d.diameter + 2 * d.bleed
+                c.drawImage(ImageReader(str(d.png)), (cx - size / 2) * mm, (cy - size / 2) * mm, size * mm, size * mm, mask="auto")
+                if side == "front":
+                    _ticks(c, cx, cy, d.diameter / 2)
+                    c.setFont("Helvetica", 5)
+                    c.setFillColorRGB(0.4, 0.4, 0.4)
+                    c.drawCentredString(cx * mm, (cy - cell / 2 - 1.2) * mm, d.label)
+            _registration(c, pw, ph)
+            c.setFont("Helvetica", 6.5)
+            c.setFillColorRGB(0.35, 0.35, 0.35)
+            what = ("FRONT: glue to the front of the card" if side == "front"
+                    else f"BACK: glue to the back of the card, lined up with sheet {i} FRONT")
+            c.drawCentredString(pw / 2 * mm, (MARGIN / 2) * mm, f"Sheet {i} of {n}, {what}. Print at 100% (actual size).")
+            c.showPage()
     c.save()
-    return pages
+    return n
 
 
 def pdf_to_pngs(pdf: str | Path, dpi: int = 300) -> list[Path]:
