@@ -379,7 +379,7 @@ def _border(sc, t, side, g: Rings, bleed):
 
 
 ART_CUT = 0.3  # the divider under a front illustration, as a fraction of the face radius below the centre
-ART_SCALE, ART_LIFT = 1.15, 0.15  # the illustration is enlarged and raised, so more of its lower scene shows above the cut
+ART_SCALE, ART_LIFT = 1.0, 0.1  # square full-bleed art just covers the window when raised 0.1 face radii
 TITLE_ON_ART = dict(color=BONE, outline=INK, outline_w=0.3, halo=((INK, 1.3, 0.25), (INK, 0.8, 0.45)))
 
 
@@ -393,7 +393,8 @@ def _art_window(sc, t, g: Rings, bleed):
     R = r * ART_SCALE
     x, y = c - R, c - ART_LIFT * r - R
     art = t.art
-    sc.add("graphics", _bitmap(f"token/{t.id}/front/{bleed}/art", x, y, 2 * R, 2 * R, [window],
+    # The cache key names the art file and its crop, so swapping the art never reuses a stale render.
+    sc.add("graphics", _bitmap(f"token/{t.id}/front/{bleed}/art/{art.path}/{art.crop}", x, y, 2 * R, 2 * R, [window],
                                lambda wp, hp: artfit.fit(art.path, art.crop, art.transparent, wp, hp)))
     hw = chord(r, cut - c) / 2
     sc.add("borders", Stroke(c - hw, cut, c + hw, cut, INK, 0.6), Stroke(c - hw, cut + 0.45, c + hw, cut + 0.45, BRASS, 0.25))

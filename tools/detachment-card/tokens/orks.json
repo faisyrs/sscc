@@ -56,7 +56,7 @@
           "CAN ADVANCE AND CHARGE"
         ],
         "via": "INTIMIDATING MOTIVATION",
-        "art": "art/megaphone.png"
+        "art": "art/megaphone.jpg"
       },
       "back": {
         "title": "INTIMIDATING MOTIVATION",
@@ -81,7 +81,7 @@
           "CAN ADVANCE AND CHARGE"
         ],
         "via": "GET BACK IN DA RACE!",
-        "art": "art/checkered-flag.png"
+        "art": "art/checkered-flag.jpg"
       },
       "back": {
         "title": "GET BACK IN DA RACE!",
@@ -106,7 +106,7 @@
           "CAN ADVANCE AND CHARGE"
         ],
         "via": "FLYBOSS",
-        "art": "art/roaring-ork.png"
+        "art": "art/roaring-ork.jpg"
       },
       "back": {
         "title": "FLYBOSS",
@@ -130,7 +130,7 @@
           "ONCE PER BATTLE",
           "ALL WAAAGH! UNITS RILED UP"
         ],
-        "art": "art/waaagh-flag.png"
+        "art": "art/waaagh-flag.jpg"
       },
       "back": {
         "title": "WAR CRY",
@@ -153,7 +153,8 @@
         "effect": [
           "MADE A CHARGE MOVE",
           "THIS TURN"
-        ]
+        ],
+        "art": "art/charged.jpg"
       },
       "back": {
         "title": "CHARGE BONUSES",
@@ -179,7 +180,7 @@
           "CAN STILL CHARGE"
         ],
         "via": "ADVANCE",
-        "art": "art/advance-arrow.png"
+        "art": "art/advance-arrow.jpg"
       },
       "back": {
         "title": "ADRENALINE JUNKIES",
@@ -204,7 +205,7 @@
           "CAN STILL CHARGE"
         ],
         "via": "FALL BACK",
-        "art": "art/fall-back-arrow.png"
+        "art": "art/fall-back-arrow.jpg"
       },
       "back": {
         "title": "ADRENALINE JUNKIES",
@@ -227,7 +228,8 @@
         "effect": [
           "UNMODIFIED HIT",
           "ROLLS OF 1-3 FAIL"
-        ]
+        ],
+        "art": "art/speediest.jpg"
       },
       "back": {
         "title": "SPEEDIEST FREEKS",
@@ -251,7 +253,8 @@
         "effect": [
           "NOT ELIGIBLE",
           "TO CHARGE"
-        ]
+        ],
+        "art": "art/grab-it.jpg"
       },
       "back": {
         "title": "GRAB IT",
@@ -274,7 +277,8 @@
         "effect": [
           "-1 TO WOUND IF S > T",
           "+1CP: ALL RANGED"
-        ]
+        ],
+        "art": "art/brutes.jpg"
       },
       "back": {
         "title": "HULKING BRUTES",
@@ -297,7 +301,8 @@
         "effect": [
           "DESTROYED? D6, 4+:",
           "STAYS UNTIL IT FIGHTS"
-        ]
+        ],
+        "art": "art/too-arrogant.jpg"
       },
       "back": {
         "title": "TOO ARROGANT TO DIE",
@@ -318,7 +323,8 @@
         "title": "NOT DEAD YET",
         "effect": [
           "UNTIL ITS UNIT FIGHTS"
-        ]
+        ],
+        "art": "art/not-dead-yet.jpg"
       },
       "back": {
         "title": "NOT DEAD YET",
@@ -341,7 +347,7 @@
           "SPEED FREEKS GET",
           "[LETHAL HITS]"
         ],
-        "art": "art/wreck.png"
+        "art": "art/wreck.jpg"
       },
       "back": {
         "title": "BUST 'EM",
@@ -365,7 +371,7 @@
           "ITS ATTACKS",
           "-1 TO HIT"
         ],
-        "art": "art/squigs.png"
+        "art": "art/squigs.jpg"
       },
       "back": {
         "title": "SQUIG BARRAGE",
@@ -388,7 +394,8 @@
         "effect": [
           "DEFFKOPTAS: +1 TO",
           "HIT WHEN SHOOTING"
-        ]
+        ],
+        "art": "art/ingressed.jpg"
       },
       "back": {
         "title": "DEFF FROM ABOVE",
@@ -412,7 +419,7 @@
           "OBJECTIVE",
           "SECURED"
         ],
-        "art": "art/grot-objective.png"
+        "art": "art/grot-objective.jpg"
       },
       "back": {
         "title": "THIEVIN' SCAVENGERS",
@@ -435,7 +442,7 @@
           "ONCE: +1 TO HIT",
           "WHEN SHOOTING"
         ],
-        "art": "art/gretchin.png"
+        "art": "art/gretchin.jpg"
       },
       "back": {
         "title": "AMMO RUNTS",
@@ -459,7 +466,7 @@
           "ONCE: +1 TO HIT",
           "WHEN SHOOTING"
         ],
-        "art": "art/big-shoota.png"
+        "art": "art/big-shoota.jpg"
       },
       "back": {
         "title": "BOSS' AMMO RUNT",
@@ -482,7 +489,8 @@
         "effect": [
           "3+: D3 MORTAL",
           "WOUNDS"
-        ]
+        ],
+        "art": "art/bomb-squig.jpg"
       },
       "back": {
         "title": "BOMB SQUIG",
@@ -506,7 +514,7 @@
           "ONCE: +1 AP AND",
           "[LETHAL HITS]"
         ],
-        "art": "art/rokkits.png"
+        "art": "art/rokkits.jpg"
       },
       "back": {
         "title": "PULSA ROKKIT",
@@ -529,7 +537,8 @@
         "effect": [
           "ONCE: HEAL",
           "+D3 MORE"
-        ]
+        ],
+        "art": "art/grot-orderly.jpg"
       },
       "back": {
         "title": "CATCH DAT RED BIT",
