@@ -27,6 +27,8 @@ SIZES = {"large": 40.0, "small": 32.0, "marker": 25.0}
 # stratagem ribbon colours on the cards. The words on the band say the same thing,
 # so the meaning doesn't rely on colour alone.
 TURNS = {"your": "YOUR TURN", "opponent": "ENEMY TURN", "either": "ANY TURN"}
+# Brighter, more saturated versions of the card ribbon colours, for the thin turn stripe.
+STRIPE = {"your": (16, 108, 240), "opponent": (228, 28, 28), "either": (22, 178, 60)}
 # The outer border shows what the effect does.
 THEMES = ("defensive", "offensive", "misc")  # armour plates, flames, gear teeth
 SIDES = ("front", "back")
@@ -400,9 +402,12 @@ def _art_window(sc, t, g: Rings, bleed):
 def _band(sc, t, side, g: Rings, bleed, title):
     """The turn-coloured stripe, then the parchment face with the title curved along its top."""
     c, W = g.c, sc.width
-    colour = C["ribbon"][t.turn]
+    # A clean, saturated stripe: it is thin, so it needs strong colour to read at a glance.
+    from PIL import Image
+
+    colour = STRIPE[t.turn]
     sc.add("background", _bitmap(f"token/{t.id}/{side}/{bleed}/band", 0, 0, W, W, [circle_pts(c, c, g.border_in)],
-                                 lambda wp, hp, s=_seed(t, "band"), col=colour: tex.painted(wp, hp, s, col, 0.05),
+                                 lambda wp, hp, col=colour: Image.new("RGB", (wp, hp), col),
                                  holes=[circle_pts(c, c, g.face)]))
     sc.add("background", _bitmap(f"token/{t.id}/{side}/{bleed}/face", c - g.face, c - g.face, 2 * g.face, 2 * g.face,
                                  [circle_pts(c, c, g.face)], lambda wp, hp, s=_seed(t, "face"): tex.parchment(wp, hp, s)))
