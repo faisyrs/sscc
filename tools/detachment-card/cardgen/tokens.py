@@ -22,7 +22,7 @@ from .scene import ArcText, Circle, Picture, Poly, Rect, Scene, Stroke, Text
 from .styles.grunge import BODY, BODY_LEADING, C, DISPLAY, LABEL, _bitmap, chamfer
 
 # Printed token diameter, mm.
-SIZES = {"large": 40.0, "small": 32.0, "marker": 25.0}
+SIZES = {"large": 60.0, "small": 60.0, "marker": 60.0}  # all tokens print at 60 mm
 # The coloured band shows whose turn the effect is triggered in, using the
 # stratagem ribbon colours on the cards. The words on the band say the same thing,
 # so the meaning doesn't rely on colour alone.
@@ -329,7 +329,7 @@ class Rings:
 
 def rings(t: Token, bleed: float) -> Rings:
     R = t.sticker_d / 2
-    border = max(1.3, 0.09 * R)
+    border = max(0.65, 0.045 * R)  # the themed edge (flames, armour, gear)
     band = max(0.9, 0.06 * R)  # a thin stripe in the turn colour, with no text
     return Rings(R + bleed, R, R - border, R - border - band)
 

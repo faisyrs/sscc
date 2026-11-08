@@ -107,13 +107,16 @@ class Disc:
     label: str
 
 
-def _ticks(c: canvas.Canvas, cx: float, cy: float, r: float):
+DISC_TICK_GAP, DISC_TICK_LEN = 0.5, 1.5  # mm; short, so three 60 mm tokens fit across a Letter page
+
+
+def _ticks(c: canvas.Canvas, cx: float, cy: float, r: float, bleed: float = BLEED):
     """Four short marks pointing at the cut circle from outside the bleed. Coordinates in mm."""
-    o = BLEED + MARK_GAP
+    o = bleed + DISC_TICK_GAP
     c.setLineWidth(0.25)
     c.setStrokeColorRGB(0, 0, 0)
     for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-        c.line((cx + dx * (r + o)) * mm, (cy + dy * (r + o)) * mm, (cx + dx * (r + o + 2.5)) * mm, (cy + dy * (r + o + 2.5)) * mm)
+        c.line((cx + dx * (r + o)) * mm, (cy + dy * (r + o)) * mm, (cx + dx * (r + o + DISC_TICK_LEN)) * mm, (cy + dy * (r + o + DISC_TICK_LEN)) * mm)
 
 
 def _registration(c: canvas.Canvas, pw: float, ph: float):
@@ -137,7 +140,7 @@ def write_duplex(pairs: list[tuple[Disc, Disc]], out: str | Path, paper: str = "
     behind its front. It also matches two-sided printing with long-edge flip.
     Cut ticks and labels are on the fronts only. Returns the number of sheets."""
     pw, ph = PAPERS[paper]
-    tick = MARK_GAP + 2.5
+    tick = DISC_TICK_GAP + DISC_TICK_LEN
     # Lay out positions once, then draw both sides from the same positions.
     placed, sheets = [], [[]]
     x0, x1 = SIDE_CLEAR + 2.0, pw - SIDE_CLEAR - 2.0
@@ -167,7 +170,7 @@ def write_duplex(pairs: list[tuple[Disc, Disc]], out: str | Path, paper: str = "
                 size = d.diameter + 2 * d.bleed
                 c.drawImage(ImageReader(str(d.png)), (cx - size / 2) * mm, (cy - size / 2) * mm, size * mm, size * mm, mask="auto")
                 if side == "front":
-                    _ticks(c, cx, cy, d.diameter / 2)
+                    _ticks(c, cx, cy, d.diameter / 2, d.bleed)
                     c.setFont("Helvetica", 5)
                     c.setFillColorRGB(0.4, 0.4, 0.4)
                     c.drawCentredString(cx * mm, (cy - cell / 2 - 1.2) * mm, d.label)

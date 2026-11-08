@@ -374,9 +374,7 @@ class Tokens(unittest.TestCase):
 
     def test_sizes_and_enemy_ring(self):
         by = {t.id: t for t in self.toks}
-        self.assertEqual(by["riled-up-motivation"].sticker_d, 40.0)
-        self.assertEqual(by["busted"].sticker_d, 32.0)
-        self.assertEqual(by["not-dead-yet"].sticker_d, 25.0)
+        self.assertTrue(all(t.sticker_d >= 60.0 for t in self.toks))
         by_turn = {turn: {t.id for t in self.toks if t.turn == turn} for turn in self.tk.TURNS}
         self.assertEqual(by_turn["opponent"], {"speediest", "brutes"})
         self.assertTrue({"riled-up-motivation", "riled-up-race", "riled-up-flyboss"} <= by_turn["your"])
