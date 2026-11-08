@@ -95,7 +95,7 @@
     {
       "id": "riled-up-flyboss",
       "size": "large",
-      "turn": "either",
+      "turn": "your",
       "theme": "offensive",
       "count": 2,
       "icon": "burst",

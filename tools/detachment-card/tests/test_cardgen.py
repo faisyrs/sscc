@@ -379,8 +379,7 @@ class Tokens(unittest.TestCase):
         self.assertEqual(by["not-dead-yet"].sticker_d, 25.0)
         by_turn = {turn: {t.id for t in self.toks if t.turn == turn} for turn in self.tk.TURNS}
         self.assertEqual(by_turn["opponent"], {"speediest", "brutes"})
-        self.assertTrue({"riled-up-motivation", "riled-up-race"} <= by_turn["your"])
-        self.assertIn("riled-up-flyboss", by_turn["either"])
+        self.assertTrue({"riled-up-motivation", "riled-up-race", "riled-up-flyboss"} <= by_turn["your"])
         self.assertEqual({t.id for t in self.toks if t.theme == "misc"}, {"grab-it", "secured"})
 
     def test_curved_titles_stay_inside_the_stripe(self):
