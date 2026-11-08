@@ -1,5 +1,7 @@
 # Detachment card generator
 
+> **Picking this up again?** Read [START-HERE.md](START-HERE.md) first: it covers the workflow for adding detachments, tokens and art.
+
 Generates the rules card for the 2" × 8" combination measuring token from a
 detachment source file, in one of two styles:
 
