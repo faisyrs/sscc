@@ -17,7 +17,7 @@ from pathlib import Path
 
 from . import text as tx
 from . import textures as tex
-from .scene import ArcText, Circle, Poly, Rect, Scene, Stroke, Text
+from .scene import ArcText, Circle, Picture, Poly, Rect, Scene, Stroke, Text
 from .styles.grunge import BODY, BODY_LEADING, C, DISPLAY, LABEL, _bitmap, chamfer
 
 # Printed token diameter, mm.
@@ -51,10 +51,21 @@ class Token:
     source: str
     keywords: tuple = field(default=())
     via: str = ""  # front: the name of the ability that gave this state
+    art: object = None  # front: optional illustration (model.Art) shown in place of the vector icon
 
     @property
     def sticker_d(self):
         return SIZES[self.size]
+
+
+def _art(file, where, base):
+    from .model import SourceError
+    from .model import _art as model_art
+
+    try:
+        return model_art({"file": file}, where, base)
+    except SourceError as e:
+        raise TokenError(str(e)) from e
 
 
 def load(path) -> list[Token]:
@@ -85,6 +96,7 @@ def load(path) -> list[Token]:
                 t["front"]["title"], tuple(t["front"]["effect"]),
                 t["back"]["title"], tuple(t["back"]["paragraphs"]),
                 t.get("source", ""), kws, t["front"].get("via", ""),
+                _art(t["front"]["art"], f"{where}.front.art", Path(path).resolve().parent) if "art" in t["front"] else None,
             )
         )
     return out
@@ -315,7 +327,7 @@ class Rings:
 def rings(t: Token, bleed: float) -> Rings:
     R = t.sticker_d / 2
     border = max(1.3, 0.09 * R)
-    band = max(2.0, 0.17 * R)
+    band = max(0.9, 0.06 * R)  # a thin stripe in the turn colour, with no text
     return Rings(R + bleed, R, R - border, R - border - band)
 
 
@@ -364,7 +376,7 @@ def _border(sc, t, side, g: Rings, bleed):
 
 
 def _band(sc, t, side, g: Rings, bleed, title):
-    """The turn-coloured band, with the title along the top and the turn along the bottom."""
+    """The turn-coloured stripe, then the parchment face with the title curved along its top."""
     c, W = g.c, sc.width
     colour = C["ribbon"][t.turn]
     sc.add("background", _bitmap(f"token/{t.id}/{side}/{bleed}/band", 0, 0, W, W, [circle_pts(c, c, g.border_in)],
@@ -373,22 +385,27 @@ def _band(sc, t, side, g: Rings, bleed, title):
     sc.add("background", _bitmap(f"token/{t.id}/{side}/{bleed}/face", c - g.face, c - g.face, 2 * g.face, 2 * g.face,
                                  [circle_pts(c, c, g.face)], lambda wp, hp, s=_seed(t, "face"): tex.parchment(wp, hp, s)))
     sc.add("borders", Circle(c, c, g.face, "none", INK, 0.35))
-    _arc_label(sc, g, title, DISPLAY, 0.72, math.radians(150), False, "title" if side == "front" else "back_title", t.id)
-    _arc_label(sc, g, TURNS[t.turn], LABEL, 0.5, math.radians(110), True, "turn", t.id)
+    _arc_label(sc, g, title, DISPLAY, math.radians(150), "title" if side == "front" else "back_title", t.id)
     sc.add("guides", Circle(c, c, g.R, "none", C["guide"], 0.15))  # the cut line, on the hidden guides layer
 
 
-def _arc_label(sc, g: Rings, text_, face, cap_frac, max_angle, bottom, block, tid):
-    """Text centred along the top (or bottom) of the band, sized to the band's width and the allowed arc."""
+TITLE_H = 0.2  # height of the title ring inside the face, as a fraction of the face radius
+TITLE_GAP = 0.04
+INNER = 1 - TITLE_H - TITLE_GAP - 0.02  # text that could meet the title's curved ends stays inside this fraction
+
+
+def _arc_label(sc, g: Rings, text_, face, max_angle, block, tid):
+    """The title, curved along the top of the face just inside the stripe, sized to its ring and the allowed arc."""
     line = tx.plain(text_)
     cap = tx.cap_height(face["regular"])
-    for size in tx.size_steps(g.band_w * cap_frac / cap, 1.0):
-        r = g.band_mid + (cap * size / 2 if bottom else -cap * size / 2)
+    outer = g.face * (1 - TITLE_GAP)
+    for size in tx.size_steps(g.face * TITLE_H / cap, 1.0):
+        r = outer - cap * size  # baseline radius; the capitals reach out to `outer`
         if tx.line_width(line, size, face) / r <= max_angle:
             break
     else:
-        raise tx.LayoutError(f"{tid}.{block}: {text_!r} does not fit along the band")
-    sc.add("text", ArcText(g.c, g.c, r, math.pi if bottom else 0.0, line, size, BONE, face, bottom, block, outline=INK, outline_w=0.25))
+        raise tx.LayoutError(f"{tid}.{block}: {text_!r} does not fit along the top of the token")
+    sc.add("text", ArcText(g.c, g.c, r, 0.0, line, size, INK, face, False, block))
     sc.fits[block] = size
 
 
@@ -404,30 +421,44 @@ def build(t: Token, side: str, bleed: float = 0.0) -> Scene:
     return sc
 
 
+def _picture(sc, t, cx, cy, s):
+    """The token's illustration if it has one, otherwise its vector icon, in an s x s box."""
+    if t.art is None:
+        ICONS[t.icon](sc, cx, cy, s)
+        return
+    sc.add("graphics", Picture(cx - s / 2, cy - s / 2, s, s, t.art))
+
+
+LABEL_FACE = {"regular": "barlow-label", "bold": "barlow-label", "ability": "barlow-label"}
+
+
 def _front(sc, t, c, r):
-    # Big icon in the upper part of the face, the effect text below it. A token
-    # that names where its state came from (via) shows that name above the icon.
-    if t.via:
-        top, bottom = c - r * 0.86, c - r * 0.56
-        face = {"regular": "barlow-label", "bold": "barlow-label", "ability": "barlow-label"}
-        fit = fit_in_circle([tx.tokenize(t.via, ())], c, r, top, bottom, r * 0.2, MIN_TEXT, face, 1.0, f"{t.id}.via", pad=0.3)
-        y = top + (bottom - top - tx.block_height(len(fit.lines), fit.size, face, 1.0)) / 2 + tx.ascent(face["regular"]) * fit.size
-        for line in fit.lines:
-            sc.add("text", Text(c, y, line, fit.size, RED, "middle", "via", face=face))
-            y += fit.size
-        sc.fits["via"] = fit.size
-        ICONS[t.icon](sc, c, c - r * 0.13, r * 0.7)
+    """Picture (illustration or vector icon) under the curved title, then the
+    source of the effect in red (if any), then the short effect."""
+    if t.art is not None:
+        _picture(sc, t, c, c - r * 0.215, r * 1.1)
+        top = c + r * 0.36
     else:
-        ICONS[t.icon](sc, c, c - r * 0.3, r * 0.95)
-    top, bottom = c + r * 0.3, c + r * 0.94
+        _picture(sc, t, c, c - r * 0.25, r * 0.88)
+        top = c + r * 0.3
+    if t.via:
+        line = tx.plain(t.via)
+        h = r * 0.19
+        w = chord(r, top + h - c) - 0.8
+        size = tx.fit_line(line, w, h / tx.cap_height(LABEL_FACE["regular"]) * 0.85, MIN_TEXT, f"{t.id}.via", LABEL_FACE)
+        sc.add("text", Text(c, top + h / 2 + tx.cap_height(LABEL_FACE["regular"]) * size / 2, line, size, RED, "middle", "via", face=LABEL_FACE))
+        sc.fits["via"] = size
+        top += h + r * 0.03
+    bottom = c + r * 0.94
     paras = [tx.tokenize(e, t.keywords) for e in t.effect]
-    face = {"regular": "barlow-label", "bold": "barlow-label", "ability": "barlow-label"}
-    fit = fit_in_circle(paras, c, r, top, bottom, r * 0.28, MIN_TEXT, face, 1.05, f"{t.id}.effect", pad=0.3)
-    y = top + tx.ascent(face["regular"]) * fit.size
+    fit = fit_in_circle(paras, c, r, top, bottom, r * 0.26, MIN_TEXT, LABEL_FACE, 1.05, f"{t.id}.effect", pad=0.3)
+    y = top + tx.ascent(LABEL_FACE["regular"]) * fit.size
     for line in fit.lines:
-        sc.add("text", Text(c, y, line, fit.size, INK, "middle", "effect", face=face, colors={"ability": RED}))
+        sc.add("text", Text(c, y, line, fit.size, INK, "middle", "effect", face=LABEL_FACE, colors={"ability": RED}))
         y += fit.size * 1.05
     sc.fits["effect"] = fit.size
+
+
 def _shaped_wrap(paras, size, face, leading, c, r, top, pad):
     """Greedy word wrap where each line may be as wide as the circle at that line's
     height (the narrower of its top and bottom edges). Returns lines and widths,
@@ -471,7 +502,8 @@ def fit_in_circle(paras, c, r, top, bottom, max_size, min_size, face, leading, w
 
 
 def _back(sc, t, c, r):
-    top, bottom = c - r * 0.92, c + r * 0.92
+    r = r * INNER
+    top, bottom = c - r * 0.97, c + r * 0.97
     paras = [tx.tokenize(p, t.keywords) for p in t.back]
     fit = fit_in_circle(paras, c, r, top, bottom, r * 0.2, MIN_TEXT, BODY, BODY_LEADING, f"{t.id}.back", pad=0.3)
     # Centre the block vertically by starting lower when there's room, re-wrapping for the new start.

@@ -355,7 +355,6 @@ class Tokens(unittest.TestCase):
                 self.assertEqual(self.drawn(front, "effect"), norm(" ".join(t.effect)))
                 self.assertEqual(self.drawn(back, "back_title"), t.back_title)
                 self.assertEqual(self.drawn(back, "back"), norm(" ".join(t.back)))
-                self.assertEqual(self.drawn(front, "turn"), self.tk.TURNS[t.turn])
 
     def test_text_stays_inside_the_face(self):
         import math
@@ -380,10 +379,11 @@ class Tokens(unittest.TestCase):
         self.assertEqual(by["not-dead-yet"].sticker_d, 25.0)
         by_turn = {turn: {t.id for t in self.toks if t.turn == turn} for turn in self.tk.TURNS}
         self.assertEqual(by_turn["opponent"], {"speediest", "brutes"})
-        self.assertTrue({"riled-up-motivation", "riled-up-race", "riled-up-flyboss"} <= by_turn["either"])
+        self.assertTrue({"riled-up-motivation", "riled-up-race"} <= by_turn["your"])
+        self.assertIn("riled-up-flyboss", by_turn["either"])
         self.assertEqual({t.id for t in self.toks if t.theme == "misc"}, {"grab-it", "secured"})
 
-    def test_curved_titles_stay_in_the_band(self):
+    def test_curved_titles_stay_inside_the_stripe(self):
         from cardgen.scene import ArcText
 
         for t in self.toks:
@@ -392,10 +392,8 @@ class Tokens(unittest.TestCase):
                 for p in self.tk.build(t, side).layers["text"]:
                     if isinstance(p, ArcText):
                         cap = text.cap_height(p.face["regular"]) * p.size
-                        lo, hi = (p.radius - cap, p.radius) if p.bottom else (p.radius, p.radius + cap)
                         with self.subTest(token=t.id, side=side, block=p.block):
-                            self.assertGreaterEqual(lo, g.face - 1e-6)
-                            self.assertLessEqual(hi, g.border_in + 1e-6)
+                            self.assertLessEqual(p.radius + cap, g.face + 1e-6)  # inside the face, clear of the stripe
 
     def test_riled_up_fronts_name_their_source(self):
         by = {t.id: t for t in self.toks}

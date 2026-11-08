@@ -45,7 +45,7 @@
     {
       "id": "riled-up-motivation",
       "size": "large",
-      "turn": "either",
+      "turn": "your",
       "theme": "offensive",
       "count": 1,
       "icon": "burst",
@@ -55,7 +55,8 @@
           "5+ INSV • [ASSAULT]",
           "CAN ADVANCE AND CHARGE"
         ],
-        "via": "INTIMIDATING MOTIVATION"
+        "via": "INTIMIDATING MOTIVATION",
+        "art": "art/megaphone.png"
       },
       "back": {
         "title": "INTIMIDATING MOTIVATION",
@@ -69,7 +70,7 @@
     {
       "id": "riled-up-race",
       "size": "large",
-      "turn": "either",
+      "turn": "your",
       "theme": "offensive",
       "count": 1,
       "icon": "burst",
@@ -79,7 +80,8 @@
           "5+ INSV • [ASSAULT]",
           "CAN ADVANCE AND CHARGE"
         ],
-        "via": "GET BACK IN DA RACE!"
+        "via": "GET BACK IN DA RACE!",
+        "art": "art/checkered-flag.png"
       },
       "back": {
         "title": "GET BACK IN DA RACE!",
@@ -103,7 +105,8 @@
           "5+ INSV • [ASSAULT]",
           "CAN ADVANCE AND CHARGE"
         ],
-        "via": "FLYBOSS"
+        "via": "FLYBOSS",
+        "art": "art/roaring-ork.png"
       },
       "back": {
         "title": "FLYBOSS",
@@ -126,7 +129,8 @@
         "effect": [
           "ONCE PER BATTLE",
           "ALL WAAAGH! UNITS RILED UP"
-        ]
+        ],
+        "art": "art/waaagh-flag.png"
       },
       "back": {
         "title": "WAR CRY",
@@ -162,18 +166,45 @@
       "source": "Warbikers and Warboss datasheets (BSData)"
     },
     {
-      "id": "junkies",
+      "id": "junkies-advance",
       "size": "small",
       "turn": "your",
       "theme": "offensive",
-      "count": 2,
+      "count": 1,
       "icon": "bolt",
       "front": {
         "title": "JUNKIES",
         "effect": [
           "[ASSAULT]",
           "CAN STILL CHARGE"
+        ],
+        "via": "ADVANCE",
+        "art": "art/advance-arrow.png"
+      },
+      "back": {
+        "title": "ADRENALINE JUNKIES",
+        "paragraphs": [
+          "After a SPEED FREEKS unit makes an advance/fall-back move: its ranged attacks have [ASSAULT], and that move does not prevent it being eligible to declare a charge.",
+          "Remove at the end of the turn."
         ]
+      },
+      "source": "Kult of Speed detachment rule"
+    },
+    {
+      "id": "junkies-fall-back",
+      "size": "small",
+      "turn": "your",
+      "theme": "offensive",
+      "count": 1,
+      "icon": "bolt",
+      "front": {
+        "title": "JUNKIES",
+        "effect": [
+          "[ASSAULT]",
+          "CAN STILL CHARGE"
+        ],
+        "via": "FALL BACK",
+        "art": "art/fall-back-arrow.png"
       },
       "back": {
         "title": "ADRENALINE JUNKIES",
@@ -309,7 +340,8 @@
         "effect": [
           "SPEED FREEKS GET",
           "[LETHAL HITS]"
-        ]
+        ],
+        "art": "art/wreck.png"
       },
       "back": {
         "title": "BUST 'EM",
@@ -332,7 +364,8 @@
         "effect": [
           "ITS ATTACKS",
           "-1 TO HIT"
-        ]
+        ],
+        "art": "art/squigs.png"
       },
       "back": {
         "title": "SQUIG BARRAGE",
@@ -378,7 +411,8 @@
         "effect": [
           "OBJECTIVE",
           "SECURED"
-        ]
+        ],
+        "art": "art/grot-objective.png"
       },
       "back": {
         "title": "THIEVIN' SCAVENGERS",
@@ -400,7 +434,8 @@
         "effect": [
           "ONCE: +1 TO HIT",
           "WHEN SHOOTING"
-        ]
+        ],
+        "art": "art/gretchin.png"
       },
       "back": {
         "title": "AMMO RUNTS",
@@ -423,7 +458,8 @@
         "effect": [
           "ONCE: +1 TO HIT",
           "WHEN SHOOTING"
-        ]
+        ],
+        "art": "art/big-shoota.png"
       },
       "back": {
         "title": "BOSS' AMMO RUNT",
@@ -469,7 +505,8 @@
         "effect": [
           "ONCE: +1 AP AND",
           "[LETHAL HITS]"
-        ]
+        ],
+        "art": "art/rokkits.png"
       },
       "back": {
         "title": "PULSA ROKKIT",
