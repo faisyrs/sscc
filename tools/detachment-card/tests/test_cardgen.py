@@ -343,7 +343,9 @@ class Tokens(unittest.TestCase):
         cls.toks = tokens.load(cls.SRC)
 
     def drawn(self, scene, block):
-        return norm(" ".join(text.line_text(p.line) for p in scene.layers["text"] if isinstance(p, layout.Text) and p.block == block))
+        from cardgen.scene import ArcText
+
+        return norm(" ".join(text.line_text(p.line) for p in scene.layers["text"] if isinstance(p, (layout.Text, ArcText)) and p.block == block))
 
     def test_every_face_builds_and_keeps_its_wording(self):
         for t in self.toks:
@@ -353,6 +355,7 @@ class Tokens(unittest.TestCase):
                 self.assertEqual(self.drawn(front, "effect"), norm(" ".join(t.effect)))
                 self.assertEqual(self.drawn(back, "back_title"), t.back_title)
                 self.assertEqual(self.drawn(back, "back"), norm(" ".join(t.back)))
+                self.assertEqual(self.drawn(front, "turn"), self.tk.TURNS[t.turn])
 
     def test_text_stays_inside_the_face(self):
         import math
@@ -375,7 +378,24 @@ class Tokens(unittest.TestCase):
         self.assertEqual(by["riled-up"].sticker_d, 40.0)
         self.assertEqual(by["busted"].sticker_d, 32.0)
         self.assertEqual(by["not-dead-yet"].sticker_d, 25.0)
-        self.assertEqual({t.id for t in self.toks if t.ring == "enemy"}, {"busted", "squigged"})
+        by_turn = {turn: {t.id for t in self.toks if t.turn == turn} for turn in self.tk.TURNS}
+        self.assertEqual(by_turn["opponent"], {"speediest", "brutes"})
+        self.assertIn("riled-up", by_turn["either"])
+        self.assertEqual({t.id for t in self.toks if t.theme == "misc"}, {"grab-it", "secured"})
+
+    def test_curved_titles_stay_in_the_band(self):
+        from cardgen.scene import ArcText
+
+        for t in self.toks:
+            g = self.tk.rings(t, 0)
+            for side in self.tk.SIDES:
+                for p in self.tk.build(t, side).layers["text"]:
+                    if isinstance(p, ArcText):
+                        cap = text.cap_height(p.face["regular"]) * p.size
+                        lo, hi = (p.radius - cap, p.radius) if p.bottom else (p.radius, p.radius + cap)
+                        with self.subTest(token=t.id, side=side, block=p.block):
+                            self.assertGreaterEqual(lo, g.face - 1e-6)
+                            self.assertLessEqual(hi, g.border_in + 1e-6)
 
     def test_bad_token_data_fails(self):
         data = json.loads(self.SRC.read_text(encoding="utf-8"))

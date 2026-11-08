@@ -11,6 +11,7 @@ and weapon abilities in a different colour.
 """
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass
 from functools import lru_cache
@@ -210,3 +211,37 @@ def fit_line(line: Line, box_w: float, max_size: float, min_size: float, what: s
         if line_width(line, size, fc) <= box_w:
             return size
     raise LayoutError(f"{what}: {line_text(line)!r} does not fit {box_w:.1f} mm even at {min_size} mm")
+
+
+def arc_outline(line: Line, size: float, fc: Face, cx: float, cy: float, radius: float, centre: float, bottom: bool = False):
+    """Outline a line of text along a circle. Returns [(kind, path data)].
+
+    radius is the baseline radius, and centre is the angle of the line's middle
+    in radians: 0 at the top, increasing clockwise. Text on the top reads
+    left to right with letters standing outward. With bottom=True it reads left
+    to right along the bottom, with letters standing toward the centre, so the
+    baseline is on the outside of the text."""
+    chars = [(ch, kind) for run, kind in line for ch in run]
+    advs = [width(ch, size, fc[kind]) for ch, kind in chars]
+    total = sum(advs)
+    out: dict = {}
+    pos = 0.0
+    for (ch, kind), adv in zip(chars, advs):
+        font = fc[kind]
+        _, _, gs, _, upem = _font(font)
+        g = _glyph(ch, font)
+        s_mid = pos + adv / 2 - total / 2
+        pos += adv
+        if bottom:
+            phi = centre - s_mid / radius
+            psi = phi - math.pi
+        else:
+            phi = centre + s_mid / radius
+            psi = phi
+        px, py = cx + radius * math.sin(phi), cy - radius * math.cos(phi)
+        k = size / upem
+        a = adv / 2
+        cs, sn = math.cos(psi), math.sin(psi)
+        pen = out.setdefault(kind, SVGPathPen(gs, ntos=lambda v: f"{v:.3f}".rstrip("0").rstrip(".")))
+        gs[g].draw(TransformPen(pen, (k * cs, k * sn, k * sn, -k * cs, px - a * cs, py - a * sn)))
+    return [(kind, pen.getCommands()) for kind, pen in out.items()]

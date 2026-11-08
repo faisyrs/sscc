@@ -117,3 +117,21 @@ class Scene:
 
     def add(self, layer, *items):
         self.layers[layer].extend(items)
+
+
+@dataclass(frozen=True)
+class ArcText:
+    """A line of text along a circle (see text.arc_outline)."""
+
+    cx: float
+    cy: float
+    radius: float  # baseline radius
+    centre: float  # angle of the middle of the line, radians, 0 = top, clockwise
+    line: tx.Line
+    size: float
+    color: str
+    face: dict = field(compare=False, hash=False)
+    bottom: bool = False
+    block: str = ""
+    outline: str = ""
+    outline_w: float = 0.0

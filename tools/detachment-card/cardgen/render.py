@@ -17,7 +17,7 @@ from psd_tools.api.layers import PixelLayer
 
 from . import artfit
 from . import text as tx
-from .scene import HIDDEN_LAYERS, LAYERS, Bitmap, Circle, Picture, Poly, Rect, Scene, Stroke, Text
+from .scene import HIDDEN_LAYERS, LAYERS, ArcText, Bitmap, Circle, Picture, Poly, Rect, Scene, Stroke, Text
 
 DPI = 300
 
@@ -116,6 +116,14 @@ def _element(p) -> str:
         )
     if isinstance(p, Text):
         return _text(p)
+    if isinstance(p, ArcText):
+        runs = tx.arc_outline(p.line, p.size, p.face, p.cx, p.cy, p.radius, p.centre, p.bottom)
+        parts = []
+        if p.outline:
+            d = " ".join(c for _, c in runs if c)
+            parts.append(f'<path fill="{p.outline}" stroke="{p.outline}" stroke-width="{_n(p.outline_w * 2)}" stroke-linejoin="round" d="{d}"/>')
+        parts += [f'<path fill="{p.color}" d="{d}"/>' for _, d in runs if d]
+        return f'<g data-block="{escape(p.block)}"><title>{escape(tx.line_text(p.line))}</title>{"".join(parts)}</g>'
     raise TypeError(p)
 
 

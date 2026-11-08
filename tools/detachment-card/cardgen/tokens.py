@@ -17,18 +17,17 @@ from pathlib import Path
 
 from . import text as tx
 from . import textures as tex
-from .scene import Circle, Poly, Rect, Scene, Stroke, Text
+from .scene import ArcText, Circle, Poly, Rect, Scene, Stroke, Text
 from .styles.grunge import BODY, BODY_LEADING, C, DISPLAY, LABEL, _bitmap, chamfer
 
 # Printed token diameter, mm.
 SIZES = {"large": 40.0, "small": 32.0, "marker": 25.0}
-RINGS = {
-    "army": (240, 196, 28),
-    "kult": (158, 31, 23),
-    "bully": (226, 221, 208),
-    "wreckas": (28, 58, 112),
-    "enemy": None,  # hazard stripes: the token goes on an enemy unit
-}
+# The coloured band shows whose turn the effect is triggered in, using the
+# stratagem ribbon colours on the cards. The words on the band say the same thing,
+# so the meaning doesn't rely on colour alone.
+TURNS = {"your": "YOUR TURN", "opponent": "ENEMY TURN", "either": "ANY TURN"}
+# The outer border shows what the effect does.
+THEMES = ("defensive", "offensive", "misc")  # armour plates, flames, gear teeth
 SIDES = ("front", "back")
 MIN_TEXT = 1.3  # mm; tokens are read close up, so they allow slightly smaller text than the cards
 
@@ -41,7 +40,8 @@ class TokenError(ValueError):
 class Token:
     id: str
     size: str
-    ring: str
+    turn: str
+    theme: str
     count: int
     icon: str
     title: str
@@ -62,7 +62,7 @@ def load(path) -> list[Token]:
     out, seen = [], set()
     for i, t in enumerate(data["tokens"]):
         where = f"$.tokens[{i}]"
-        for key in ("id", "size", "ring", "count", "icon", "front", "back"):
+        for key in ("id", "size", "turn", "theme", "count", "icon", "front", "back"):
             if key not in t:
                 raise TokenError(f"{where}.{key}: required field is missing")
         if t["id"] in seen:
@@ -70,15 +70,17 @@ def load(path) -> list[Token]:
         seen.add(t["id"])
         if t["size"] not in SIZES:
             raise TokenError(f"{where}.size: must be one of {tuple(SIZES)}")
-        if t["ring"] not in RINGS:
-            raise TokenError(f"{where}.ring: must be one of {tuple(RINGS)}")
+        if t["turn"] not in TURNS:
+            raise TokenError(f"{where}.turn: must be one of {tuple(TURNS)}")
+        if t["theme"] not in THEMES:
+            raise TokenError(f"{where}.theme: must be one of {THEMES}")
         if t["icon"] not in ICONS:
             raise TokenError(f"{where}.icon: unknown icon {t['icon']!r}; known: {sorted(ICONS)}")
         if not isinstance(t["count"], int) or t["count"] < 1:
             raise TokenError(f"{where}.count: must be a positive integer")
         out.append(
             Token(
-                t["id"], t["size"], t["ring"], t["count"], t["icon"],
+                t["id"], t["size"], t["turn"], t["theme"], t["count"], t["icon"],
                 t["front"]["title"], tuple(t["front"]["effect"]),
                 t["back"]["title"], tuple(t["back"]["paragraphs"]),
                 t.get("source", ""), kws,
@@ -293,77 +295,127 @@ def _seed(t, key):
     return tex.seed_of("token", t.id, key)
 
 
-def build(t: Token, side: str, bleed: float = 0.0) -> Scene:
-    """One face of a token. The scene is the sticker plus `bleed` mm all round;
-    the cut line is the circle of the sticker's diameter, on the guides layer."""
+@dataclass(frozen=True)
+class Rings:
+    c: float  # centre
+    R: float  # token radius (the cut line)
+    border_in: float  # inner radius of the themed border
+    face: float  # radius of the parchment face (inner edge of the turn band)
+
+    @property
+    def band_mid(self):
+        return (self.border_in + self.face) / 2
+
+    @property
+    def band_w(self):
+        return self.border_in - self.face
+
+
+def rings(t: Token, bleed: float) -> Rings:
     R = t.sticker_d / 2
-    W = 2 * (R + bleed)
-    c = R + bleed
-    sc = Scene(W, W)
-    ring_w = max(1.6, 0.12 * R)
-    band_w = max(0.7, 0.05 * R)
-    face_r = R - ring_w - band_w
-
-    # Metal ring (extended into the bleed) and the coloured band inside it, on the background layer.
-    outer = circle_pts(c, c, R + bleed)
-    sc.add("background", _bitmap(f"token/{t.id}/{side}/{bleed}/ring", 0, 0, W, W, [outer],
-                                 lambda wp, hp, s=_seed(t, "ring"): tex.metal(wp, hp, s), holes=[circle_pts(c, c, R - ring_w)]))
-    band_outer, band_inner = circle_pts(c, c, R - ring_w), circle_pts(c, c, face_r)
-    colour = RINGS[t.ring]
-    gen = (lambda wp, hp, s=_seed(t, "band"): tex.hazard(wp, hp, s, wp / W * 1.6)) if colour is None else \
-          (lambda wp, hp, s=_seed(t, "band"), col=colour: tex.painted(wp, hp, s, col, 0.08))
-    sc.add("background", _bitmap(f"token/{t.id}/{side}/{bleed}/band", 0, 0, W, W, [band_outer], gen, holes=[band_inner]))
-    sc.add("background", _bitmap(f"token/{t.id}/{side}/{bleed}/face", c - face_r, c - face_r, 2 * face_r, 2 * face_r,
-                                 [circle_pts(c, c, face_r)], lambda wp, hp, s=_seed(t, "face"): tex.parchment(wp, hp, s)))
-    sc.add("borders", Circle(c, c, face_r, "none", INK, 0.35))
-    sc.add("borders", Circle(c, c, R - ring_w, "none", INK, 0.3))
-    n_rivets = 8 if t.size != "marker" else 6
-    for i in range(n_rivets):
-        a = 2 * math.pi * (i + 0.5) / n_rivets
-        rr = R - ring_w / 2
-        x, y = c + rr * math.cos(a), c + rr * math.sin(a)
-        r = min(0.45, ring_w * 0.22)
-        sc.add("borders", Circle(x, y, r, "#1d1916"), Circle(x, y, r * 0.74, "#7b7264"), Circle(x - r * 0.22, y - r * 0.22, r * 0.26, "#d6cdb9"))
-    # Cut line, on the hidden guides layer.
-    sc.add("guides", Circle(c, c, R, "none", C["guide"], 0.15))
-
-    (_front if side == "front" else _back)(sc, t, c, face_r)
-    return sc
+    border = max(1.3, 0.09 * R)
+    band = max(2.0, 0.17 * R)
+    return Rings(R + bleed, R, R - border, R - border - band)
 
 
-def _banner(sc, t, side, c, y, h, w, text_, block, face=DISPLAY):
-    x = c - w / 2
-    col = (240, 196, 28) if t.ring in ("army", "enemy", "kult") else ((226, 221, 208) if t.ring == "bully" else (240, 196, 28))
-    seed = _seed(t, f"{side}-banner")
-    pts = chamfer(x, y, w, h, h * 0.25)
-    sc.add("borders", _bitmap(f"token/{t.id}/{side}/{c}/banner", x, y, w, h, [pts], lambda wp, hp: tex.painted(wp, hp, seed, col, 0.06)))
-    sc.add("borders", Poly(pts, stroke=INK, sw=0.3))
+def _border(sc, t, side, g: Rings, bleed):
+    """The outermost ring, extended into the bleed, themed by what the effect does."""
+    c, W = g.c, sc.width
+    outer, hole = circle_pts(c, c, g.R + bleed), circle_pts(c, c, g.border_in)
+    key = f"token/{t.id}/{side}/{bleed}/border"
+    if t.theme == "offensive":
+        sc.add("background", _bitmap(key, 0, 0, W, W, [outer], lambda wp, hp, s=_seed(t, "fire"): tex.fire(wp, hp, s), holes=[hole]))
+        # Flame tongues licking inward over the edge of the band.
+        n = 22 if t.size != "marker" else 16
+        for i in range(n):
+            a0 = 2 * math.pi * i / n
+            a1 = a0 + 2 * math.pi / n
+            am = (a0 + a1) / 2
+            tip = g.border_in - g.band_w * (0.18 if i % 2 else 0.1)
+            pts = ((c + g.border_in * math.sin(a0), c - g.border_in * math.cos(a0)),
+                   (c + tip * math.sin(am), c - tip * math.cos(am)),
+                   (c + g.border_in * math.sin(a1), c - g.border_in * math.cos(a1)))
+            sc.add("borders", Poly(pts, fill="#f0a020" if i % 2 else "#d0461a"))
+    elif t.theme == "defensive":
+        sc.add("background", _bitmap(key, 0, 0, W, W, [outer], lambda wp, hp, s=_seed(t, "armour"): tex.metal(wp, hp, s, (150, 146, 136)), holes=[hole]))
+        n = 8
+        for i in range(n):  # seams between armour plates, each plate riveted at both ends
+            a = 2 * math.pi * i / n
+            sc.add("borders", Stroke(c + g.border_in * math.sin(a), c - g.border_in * math.cos(a),
+                                     c + (g.R + bleed) * math.sin(a), c - (g.R + bleed) * math.cos(a), INK, 0.3))
+            for da in (0.12, 2 * math.pi / n - 0.12):
+                rr = (g.R + g.border_in) / 2
+                x, y = c + rr * math.sin(a + da), c - rr * math.cos(a + da)
+                r = min(0.4, (g.R - g.border_in) * 0.24)
+                sc.add("borders", Circle(x, y, r, "#1d1916"), Circle(x, y, r * 0.74, "#8b8274"), Circle(x - r * 0.2, y - r * 0.2, r * 0.26, "#e2d9c4"))
+    else:
+        sc.add("background", _bitmap(key, 0, 0, W, W, [outer], lambda wp, hp, s=_seed(t, "gear"): tex.metal(wp, hp, s, (70, 66, 60)), holes=[hole]))
+        n = 18 if t.size != "marker" else 14
+        r0, r1 = g.border_in + (g.R - g.border_in) * 0.15, g.R + bleed
+        for i in range(n):  # gear teeth
+            a = 2 * math.pi * i / n
+            w0, w1 = math.pi / n * 0.62, math.pi / n * 0.42
+            pts = [(c + r0 * math.sin(a - w0), c - r0 * math.cos(a - w0)), (c + r1 * math.sin(a - w1), c - r1 * math.cos(a - w1)),
+                   (c + r1 * math.sin(a + w1), c - r1 * math.cos(a + w1)), (c + r0 * math.sin(a + w0), c - r0 * math.cos(a + w0))]
+            sc.add("borders", Poly(tuple(pts), fill="#a39b8c", stroke=INK, sw=0.2))
+        sc.add("borders", Circle(c, c, r0, "none", INK, 0.25))
+    sc.add("borders", Circle(c, c, g.border_in, "none", INK, 0.35))
+
+
+def _band(sc, t, side, g: Rings, bleed, title):
+    """The turn-coloured band, with the title along the top and the turn along the bottom."""
+    c, W = g.c, sc.width
+    colour = C["ribbon"][t.turn]
+    sc.add("background", _bitmap(f"token/{t.id}/{side}/{bleed}/band", 0, 0, W, W, [circle_pts(c, c, g.border_in)],
+                                 lambda wp, hp, s=_seed(t, "band"), col=colour: tex.painted(wp, hp, s, col, 0.05),
+                                 holes=[circle_pts(c, c, g.face)]))
+    sc.add("background", _bitmap(f"token/{t.id}/{side}/{bleed}/face", c - g.face, c - g.face, 2 * g.face, 2 * g.face,
+                                 [circle_pts(c, c, g.face)], lambda wp, hp, s=_seed(t, "face"): tex.parchment(wp, hp, s)))
+    sc.add("borders", Circle(c, c, g.face, "none", INK, 0.35))
+    _arc_label(sc, g, title, DISPLAY, 0.72, math.radians(150), False, "title" if side == "front" else "back_title", t.id)
+    _arc_label(sc, g, TURNS[t.turn], LABEL, 0.5, math.radians(110), True, "turn", t.id)
+    sc.add("guides", Circle(c, c, g.R, "none", C["guide"], 0.15))  # the cut line, on the hidden guides layer
+
+
+def _arc_label(sc, g: Rings, text_, face, cap_frac, max_angle, bottom, block, tid):
+    """Text centred along the top (or bottom) of the band, sized to the band's width and the allowed arc."""
     line = tx.plain(text_)
-    size = tx.fit_line(line, w - h * 0.6, h * 0.66, 1.2, f"{t.id}.{block}", face)
-    sc.add("text", Text(c, y + h / 2 + tx.cap_height(face["regular"]) * size / 2, line, size, INK, "middle", block, face=face))
+    cap = tx.cap_height(face["regular"])
+    for size in tx.size_steps(g.band_w * cap_frac / cap, 1.0):
+        r = g.band_mid + (cap * size / 2 if bottom else -cap * size / 2)
+        if tx.line_width(line, size, face) / r <= max_angle:
+            break
+    else:
+        raise tx.LayoutError(f"{tid}.{block}: {text_!r} does not fit along the band")
+    sc.add("text", ArcText(g.c, g.c, r, math.pi if bottom else 0.0, line, size, BONE, face, bottom, block, outline=INK, outline_w=0.25))
     sc.fits[block] = size
 
 
+def build(t: Token, side: str, bleed: float = 0.0) -> Scene:
+    """One face of a token. The scene is the token plus `bleed` mm all round;
+    the cut line is the circle of the token's diameter, on the guides layer."""
+    g = rings(t, bleed)
+    W = 2 * g.c
+    sc = Scene(W, W)
+    _border(sc, t, side, g, bleed)
+    _band(sc, t, side, g, bleed, t.title if side == "front" else t.back_title)
+    (_front if side == "front" else _back)(sc, t, g.c, g.face)
+    return sc
+
+
 def _front(sc, t, c, r):
-    # Title banner across the upper part of the face. It is wider than the face, like a nameplate.
-    bh = r * 0.36
-    by = c - r * 0.62
-    _banner(sc, t, "front", c, by, bh, min(2 * r * 1.04, chord(r, r * 0.62) + r * 0.5), t.title, "title")
-    # Icon in the middle.
-    s = r * 0.62
-    ICONS[t.icon](sc, c, c + r * 0.02, s)
-    # Effect text below, centred, within the face's width at its lowest line.
-    top, bottom = c + r * 0.38, c + r * 0.92
+    # Big icon in the upper part of the face, the effect text below it.
+    s = r * 0.95
+    ICONS[t.icon](sc, c, c - r * 0.3, s)
+    top, bottom = c + r * 0.3, c + r * 0.94
     paras = [tx.tokenize(e, t.keywords) for e in t.effect]
     face = {"regular": "barlow-label", "bold": "barlow-label", "ability": "barlow-label"}
-    fit = fit_in_circle(paras, c, r, top, bottom, r * 0.2, MIN_TEXT, face, 1.05, f"{t.id}.effect")
+    fit = fit_in_circle(paras, c, r, top, bottom, r * 0.28, MIN_TEXT, face, 1.05, f"{t.id}.effect", pad=0.3)
     y = top + tx.ascent(face["regular"]) * fit.size
     for line in fit.lines:
         sc.add("text", Text(c, y, line, fit.size, INK, "middle", "effect", face=face, colors={"ability": RED}))
         y += fit.size * 1.05
     sc.fits["effect"] = fit.size
-
-
 def _shaped_wrap(paras, size, face, leading, c, r, top, pad):
     """Greedy word wrap where each line may be as wide as the circle at that line's
     height (the narrower of its top and bottom edges). Returns lines and widths,
@@ -407,15 +459,17 @@ def fit_in_circle(paras, c, r, top, bottom, max_size, min_size, face, leading, w
 
 
 def _back(sc, t, c, r):
-    bh = r * 0.28
-    by = c - r * 0.78
-    _banner(sc, t, "back", c, by, bh, chord(r, r * 0.5) * 0.98, t.back_title, "back_title", LABEL)
-    top, bottom = by + bh + r * 0.05, c + r * 0.93
+    top, bottom = c - r * 0.92, c + r * 0.92
     paras = [tx.tokenize(p, t.keywords) for p in t.back]
-    fit = fit_in_circle(paras, c, r, top, bottom, r * 0.16, MIN_TEXT, BODY, BODY_LEADING, f"{t.id}.back")
-    # Lines are wrapped for their position from the top, so the block starts at the top (no vertical centring).
-    y = top + tx.ascent(BODY["regular"]) * fit.size
-    for line in fit.lines:
+    fit = fit_in_circle(paras, c, r, top, bottom, r * 0.2, MIN_TEXT, BODY, BODY_LEADING, f"{t.id}.back", pad=0.3)
+    # Centre the block vertically by starting lower when there's room, re-wrapping for the new start.
+    used = tx.block_height(len(fit.lines), fit.size, BODY, BODY_LEADING)
+    start = top + (bottom - top - used) / 2
+    lines = _shaped_wrap(paras, fit.size, BODY, BODY_LEADING, c, r, start, 0.3)
+    if lines is None or tx.block_height(len(lines), fit.size, BODY, BODY_LEADING) > bottom - start:
+        start, lines = top, fit.lines
+    y = start + tx.ascent(BODY["regular"]) * fit.size
+    for line in lines:
         sc.add("text", Text(c, y, line, fit.size, INK, "middle", "back", face=BODY, colors={"ability": RED}))
         y += fit.size * BODY_LEADING
     sc.fits["back"] = fit.size

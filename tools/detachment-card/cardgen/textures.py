@@ -125,3 +125,18 @@ def masked(im: Image.Image, polys_px, ss=4, holes_px=()) -> Image.Image:
     out = im.convert("RGBA")
     out.putalpha(mask.resize((w, h), Image.Resampling.LANCZOS))
     return out
+
+
+def fire(w, h, seed) -> Image.Image:
+    """Flames: noise mapped through a dark red, orange and yellow gradient, with soot."""
+    rng = np.random.default_rng(seed)
+    n = fbm(w, h, rng, (40, 14, 5), (0.5, 0.3, 0.2))
+    n = np.clip((n - n.min()) / max(np.ptp(n), 1e-6), 0, 1)
+    stops = np.array([[40, 8, 4], [150, 25, 8], [235, 100, 15], [255, 200, 40], [255, 245, 170]], np.float32)
+    pos = n * (len(stops) - 1)
+    i = np.clip(pos.astype(int), 0, len(stops) - 2)
+    f = (pos - i)[..., None]
+    arr = stops[i] * (1 - f) + stops[i + 1] * f
+    soot = np.clip((fbm(w, h, rng, (25, 8), (0.6, 0.4)) - 0.62) * 5, 0, 1)[..., None]
+    arr = arr * (1 - soot * 0.7)
+    return _rgb(arr)
